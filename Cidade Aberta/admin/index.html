@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel Administrativo - Cidade Aberta Santarém</title>
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="admin-panel.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div class="admin-container">
+        <!-- Sidebar -->
+        <nav class="admin-sidebar">
+            <div class="sidebar-header">
+                <div class="logo">
+                    <i class="fas fa-shield-alt"></i>
+                    <h2>Admin Panel</h2>
+                </div>
+            </div>
+            
+            <ul class="sidebar-menu">
+                <li class="menu-item active" data-section="dashboard">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span>Dashboard</span>
+                </li>
+                <li class="menu-item" data-section="users">
+                    <i class="fas fa-users"></i>
+                    <span>Gerenciar Usuários</span>
+                </li>
+                <li class="menu-item" data-section="logs">
+                    <i class="fas fa-clipboard-list"></i>
+                    <span>Logs do Sistema</span>
+                </li>
+                <li class="menu-item" data-section="settings">
+                    <i class="fas fa-cog"></i>
+                    <span>Configurações</span>
+                </li>
+            </ul>
+            
+            <div class="sidebar-footer">
+                <div class="user-info">
+                    <i class="fas fa-user-circle"></i>
+                    <div>
+                        <span class="user-name" id="current-admin-name">Admin</span>
+                        <small class="user-role" id="current-admin-role">Super Admin</small>
+                    </div>
+                </div>
+                <button class="btn btn-secondary" onclick="voltarSistema()">
+                    <i class="fas fa-arrow-left"></i>
+                    Voltar ao Sistema
+                </button>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="admin-content">
+            <!-- Dashboard Section -->
+            <section id="dashboard-section" class="content-section active">
+                <div class="section-header">
+                    <h1><i class="fas fa-tachometer-alt"></i> Dashboard Administrativo</h1>
+                    <p>Visão geral do sistema e estatísticas importantes</p>
+                </div>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-admins-ativos">0</h3>
+                            <p>Admins Ativos</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-user-slash"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-admins-bloqueados">0</h3>
+                            <p>Admins Bloqueados</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-sign-in-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-logins-hoje">0</h3>
+                            <p>Logins Hoje</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-clock"></i>
+                        </div>
+                        <div class="stat-info">
+                            <h3 id="stat-ultimo-acesso">--</h3>
+                            <p>Último Acesso</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="dashboard-grid">
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-chart-line"></i> Atividade Recente</h3>
+                        <div id="recent-activity">
+                            <div class="loading">Carregando atividades...</div>
+                        </div>
+                    </div>
+                    
+                    <div class="dashboard-card">
+                        <h3><i class="fas fa-exclamation-triangle"></i> Alertas do Sistema</h3>
+                        <div id="system-alerts">
+                            <div class="alert-item success">
+                                <i class="fas fa-check-circle"></i>
+                                <span>Sistema funcionando normalmente</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Management Section -->
+            <section id="users-section" class="content-section">
+                <div class="section-header">
+                    <h1><i class="fas fa-users"></i> Gerenciar Usuários</h1>
+                    <button class="btn btn-primary" onclick="showAddUserModal()">
+                        <i class="fas fa-plus"></i>
+                        Adicionar Usuário
+                    </button>
+                </div>
+                
+                <div class="users-table-container">
+                    <table class="admin-table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>Nome</th>
+                                <th>Email</th>
+                                <th>Cargo</th>
+                                <th>Departamento</th>
+                                <th>Nível</th>
+                                <th>Status</th>
+                                <th>Último Acesso</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr>
+                                <td colspan="8" class="loading">Carregando usuários...</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Logs Section -->
+            <section id="logs-section" class="content-section">
+                <div class="section-header">
+                    <h1><i class="fas fa-clipboard-list"></i> Logs do Sistema</h1>
+                    <div class="filters">
+                        <select id="log-filter">
+                            <option value="">Todas as ações</option>
+                            <option value="login">Logins</option>
+                            <option value="usuario_criado">Usuários Criados</option>
+                            <option value="usuario_atualizado">Usuários Atualizados</option>
+                            <option value="senha_resetada">Senhas Resetadas</option>
+                        </select>
+                        <button class="btn btn-secondary" onclick="loadLogs()">
+                            <i class="fas fa-refresh"></i>
+                            Atualizar
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="logs-container">
+                    <div id="logs-list">
+                        <div class="loading">Carregando logs...</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Settings Section -->
+            <section id="settings-section" class="content-section">
+                <div class="section-header">
+                    <h1><i class="fas fa-cog"></i> Configurações do Sistema</h1>
+                </div>
+                
+                <div class="settings-grid">
+                    <div class="settings-card">
+                        <h3><i class="fas fa-shield-alt"></i> Segurança</h3>
+                        <div class="setting-item">
+                            <label>Tempo de sessão (minutos)</label>
+                            <input type="number" value="60" min="30" max="480">
+                        </div>
+                        <div class="setting-item">
+                            <label>Máximo de tentativas de login</label>
+                            <input type="number" value="5" min="3" max="10">
+                        </div>
+                        <button class="btn btn-primary">Salvar Configurações</button>
+                    </div>
+                    
+                    <div class="settings-card">
+                        <h3><i class="fas fa-envelope"></i> Notificações</h3>
+                        <div class="setting-item">
+                            <label class="checkbox-container">
+                                <input type="checkbox" checked>
+                                <span class="checkmark"></span>
+                                <span>Notificar novos usuários por email</span>
+                            </label>
+                        </div>
+                        <div class="setting-item">
+                            <label class="checkbox-container">
+                                <input type="checkbox" checked>
+                                <span class="checkmark"></span>
+                                <span>Alertas de segurança</span>
+                            </label>
+                        </div>
+                        <button class="btn btn-primary">Salvar Preferências</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <!-- Modal para Adicionar Usuário -->
+    <div id="add-user-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-user-plus"></i> Adicionar Novo Usuário</h2>
+            
+            <form id="add-user-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-nome">
+                            <i class="fas fa-user"></i> Nome Completo
+                        </label>
+                        <input type="text" id="user-nome" name="nome" required 
+                               placeholder="Ex: João Silva Santos">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user-email">
+                            <i class="fas fa-envelope"></i> Email Institucional
+                        </label>
+                        <input type="email" id="user-email" name="email" required 
+                               placeholder="usuario@santarem.pa.gov.br">
+                    </div>
+                </div>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="user-cargo">
+                            <i class="fas fa-briefcase"></i> Cargo
+                        </label>
+                        <input type="text" id="user-cargo" name="cargo" required 
+                               placeholder="Ex: Secretário, Coordenador, etc.">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="user-departamento">
+                            <i class="fas fa-building"></i> Departamento/Secretaria
+                        </label>
+                        <select id="user-departamento" name="departamento" required>
+                            <option value="">Selecione...</option>
+                            <option value="Secretaria de Obras">Secretaria de Obras</option>
+                            <option value="Secretaria de Limpeza Urbana">Secretaria de Limpeza Urbana</option>
+                            <option value="Secretaria de Transporte">Secretaria de Transporte</option>
+                            <option value="Secretaria de Saúde">Secretaria de Saúde</option>
+                            <option value="Secretaria de Educação">Secretaria de Educação</option>
+                            <option value="Secretaria de Segurança">Secretaria de Segurança</option>
+                            <option value="Tecnologia da Informação">Tecnologia da Informação</option>
+                            <option value="Gabinete do Prefeito">Gabinete do Prefeito</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="user-nivel">
+                        <i class="fas fa-shield-alt"></i> Nível de Acesso
+                    </label>
+                    <select id="user-nivel" name="nivel_acesso" required>
+                        <option value="admin">Administrador</option>
+                        <option value="super_admin">Super Administrador</option>
+                    </select>
+                    <small>Super Administradores podem gerenciar outros usuários</small>
+                </div>
+                
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" onclick="hideModal('add-user-modal')">
+                        Cancelar
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i>
+                        Criar Usuário
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal para Exibir Credenciais -->
+    <div id="credentials-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-key"></i> Credenciais do Novo Usuário</h2>
+            
+            <div class="credentials-info">
+                <div class="alert success">
+                    <i class="fas fa-check-circle"></i>
+                    <span>Usuário criado com sucesso!</span>
+                </div>
+                
+                <div class="credentials-box">
+                    <h3>Credenciais Temporárias:</h3>
+                    <div class="credential-item">
+                        <label>Email:</label>
+                        <span id="cred-email"></span>
+                    </div>
+                    <div class="credential-item">
+                        <label>Senha Temporária:</label>
+                        <span id="cred-password" class="password-display"></span>
+                        <button type="button" class="btn-icon" onclick="copyToClipboard('cred-password')">
+                            <i class="fas fa-copy"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="alert warning">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <strong>Importante:</strong> Envie essas credenciais para o usuário de forma segura. 
+                    Ele deverá alterar a senha no primeiro acesso.
+                </div>
+            </div>
+            
+            <div class="modal-actions">
+                <button type="button" class="btn btn-primary" onclick="hideModal('credentials-modal')">
+                    Entendi
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin-panel.js"></script>
+</body>
+</html>

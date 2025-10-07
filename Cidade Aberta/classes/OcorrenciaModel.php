@@ -333,5 +333,96 @@ class OcorrenciaModel extends BaseModel {
         
         return $filename;
     }
+    
+    /**
+     * Atualizar uma ocorrência
+     */
+    public function update($id, $data) {
+        try {
+            // Validar dados básicos (menos restritivo que criação)
+            $allowedFields = [
+                'tipo', 'endereco', 'descricao', 'status', 'prioridade', 
+                'observacoes', 'latitude', 'longitude', 'nome_cidadao', 
+                'email_cidadao', 'telefone_cidadao'
+            ];
+            
+            $updateData = [];
+            $placeholders = [];
+            
+            foreach ($allowedFields as $field) {
+                if (isset($data[$field])) {
+                    $updateData[$field] = $data[$field];
+                    $placeholders[] = "{$field} = :{$field}";
+                }
+            }
+            
+            if (empty($updateData)) {
+                throw new Exception('Nenhum dado válido para atualização');
+            }
+            
+            // Adicionar timestamp de atualização
+            $updateData['data_atualizacao'] = date('Y-m-d H:i:s');
+            $placeholders[] = "data_atualizacao = :data_atualizacao";
+            
+            $sql = "UPDATE {$this->table} SET " . implode(', ', $placeholders) . " WHERE id = :id";
+            $updateData['id'] = $id;
+            
+            $stmt = $this->db->prepare($sql);
+            $result = $stmt->execute($updateData);
+            
+            if (!$result) {
+                throw new Exception('Erro ao atualizar ocorrência no banco de dados');
+            }
+            
+            // Verificar se alguma linha foi afetada
+            if ($stmt->rowCount() === 0) {
+                throw new Exception('Ocorrência não encontrada ou nenhuma alteração feita');
+            }
+            
+            return true;
+            
+        } catch (PDOException $e) {
+            throw new Exception('Erro no banco de dados: ' . $e->getMessage());
+        }
+    }
+    
+    /**
+     * Excluir uma ocorrência
+     */
+    public function delete($id) {
+        try {
+            // Primeiro, verificar se a ocorrência existe
+            $checkSql = "SELECT id, foto FROM {$this->table} WHERE id = :id";
+            $checkStmt = $this->db->prepare($checkSql);
+            $checkStmt->execute(['id' => $id]);
+            $ocorrencia = $checkStmt->fetch(PDO::FETCH_ASSOC);
+            
+            if (!$ocorrencia) {
+                throw new Exception('Ocorrência não encontrada');
+            }
+            
+            // Excluir arquivo de foto se existir
+            if (!empty($ocorrencia['foto'])) {
+                $fotoPath = '../' . AppConfig::UPLOAD_PATH . $ocorrencia['foto'];
+                if (file_exists($fotoPath)) {
+                    unlink($fotoPath);
+                }
+            }
+            
+            // Excluir do banco de dados
+            $sql = "DELETE FROM {$this->table} WHERE id = :id";
+            $stmt = $this->db->prepare($sql);
+            $result = $stmt->execute(['id' => $id]);
+            
+            if (!$result) {
+                throw new Exception('Erro ao excluir ocorrência do banco de dados');
+            }
+            
+            return $stmt->rowCount() > 0;
+            
+        } catch (PDOException $e) {
+            throw new Exception('Erro no banco de dados: ' . $e->getMessage());
+        }
+    }
 }
 ?>

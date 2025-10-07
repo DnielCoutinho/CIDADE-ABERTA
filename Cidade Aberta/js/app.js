@@ -3,8 +3,10 @@ const CONFIG = {
     API_BASE_URL: './api',
     API_ENDPOINTS: {
         ocorrencias: './api/ocorrencias_simple.php',
-        login: './api/login.php',
-        rastreamento: './api/rastreamento.php',
+        login: './api/login_unificado.php',
+        loginCidadao: './api/login_cidadao.php',
+        sessao: './api/sessao.php',
+        rastreamento: './api/rastreamento_simple.php',
         contato: './api/contato_simple.php',
         estatisticas: './api/stats.php'
     },
@@ -24,18 +26,232 @@ const state = {
     ocorrencias: [],
     selectedLocation: null,
     tempMarker: null,
+    tempTrackingMarker: null,
     currentUser: null,
-    isAuthenticated: false
+    isAuthenticated: false,
+    userType: null // 'admin', 'cidadao', ou null
 };
+
+// Funções para gerenciar modais (definidas cedo para uso global)
+function showModal(modalId) {
+    console.log('📱 Tentando mostrar modal:', modalId);
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        console.log('✅ Modal encontrado, exibindo...');
+        modal.style.display = 'block';
+        
+        // Salva o overflow original antes de modificar
+        if (!document.body.dataset.originalOverflow) {
+            document.body.dataset.originalOverflow = document.body.style.overflow || 'auto';
+        }
+        document.body.style.overflow = 'hidden';
+        
+        // Força o scroll do modal para o topo
+        setTimeout(() => {
+            modal.scrollTop = 0;
+            const modalContent = modal.querySelector('.modal-content');
+            if (modalContent) {
+                modalContent.scrollTop = 0;
+            }
+        }, 10);
+        
+    } else {
+        console.error('❌ Modal não encontrado:', modalId);
+    }
+}
+
+function hideModal(modalId) {
+    const modal = document.getElementById(modalId);
+    if (modal) {
+        modal.style.display = 'none';
+        
+        // Para modais dinâmicos (como admin-options-modal), remover do DOM
+        if (modalId === 'admin-options-modal') {
+            modal.remove();
+        }
+        
+        // Restaura o overflow original ou define como auto
+        const originalOverflow = document.body.dataset.originalOverflow || 'auto';
+        document.body.style.overflow = originalOverflow;
+        // Remove o atributo para limpeza
+        delete document.body.dataset.originalOverflow;
+    }
+}
+
+// Função de Login Unificado
+function showLoginModal() {
+    console.log('🔑 Abrindo modal de login unificado...');
+    showModal('login-modal');
+}
+
+// Funções para modais de segurança
+function showRecuperarSenhaModal() {
+    hideModal('cidadao-modal');
+    showModal('recuperar-senha-modal');
+}
+
+function showCadastroModal() {
+    hideModal('cidadao-modal');
+    showModal('cadastro-modal');
+}
+
+// Função para alternar visibilidade da senha
+function togglePasswordVisibility(inputId, button) {
+    const input = document.getElementById(inputId);
+    const icon = button.querySelector('i');
+    
+    if (input.type === 'password') {
+        input.type = 'text';
+        icon.className = 'fas fa-eye-slash';
+    } else {
+        input.type = 'password';
+        icon.className = 'fas fa-eye';
+    }
+}
+
+// Função para verificar força da senha
+function checkPasswordStrength(password) {
+    const strengthElement = document.getElementById('password-strength');
+    if (!strengthElement) return;
+    
+    let score = 0;
+    
+    // Critérios de força
+    if (password.length >= 8) score++;
+    if (/[a-z]/.test(password)) score++;
+    if (/[A-Z]/.test(password)) score++;
+    if (/[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    
+    // Aplicar classe baseada na força
+    strengthElement.className = 'password-strength';
+    if (score < 3) {
+        strengthElement.classList.add('weak');
+    } else if (score < 5) {
+        strengthElement.classList.add('medium');
+    } else {
+        strengthElement.classList.add('strong');
+    }
+}
+
+// Função para validar email
+function isValidEmail(email) {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+// Função para criptografar senha (básico)
+function hashPassword(password) {
+    // Em produção, usar uma biblioteca de hash segura
+    let hash = 0;
+    for (let i = 0; i < password.length; i++) {
+        const char = password.charCodeAt(i);
+        hash = ((hash << 5) - hash) + char;
+        hash = hash & hash; // Converte para 32bit
+    }
+    return Math.abs(hash).toString(16);
+}
+
+// Função para limitar tentativas de login
+let loginAttempts = {};
+const MAX_ATTEMPTS = 5;
+const LOCKOUT_TIME = 15 * 60 * 1000; // 15 minutos
+
+function checkLoginAttempts(email) {
+    const now = Date.now();
+    
+    if (!loginAttempts[email]) {
+        loginAttempts[email] = { count: 0, lastAttempt: now };
+        return true;
+    }
+    
+    const attempts = loginAttempts[email];
+    
+    // Resetar se passou o tempo de bloqueio
+    if (now - attempts.lastAttempt > LOCKOUT_TIME) {
+        attempts.count = 0;
+        attempts.lastAttempt = now;
+        return true;
+    }
+    
+    // Verificar se excedeu tentativas
+    if (attempts.count >= MAX_ATTEMPTS) {
+        const timeLeft = Math.ceil((LOCKOUT_TIME - (now - attempts.lastAttempt)) / 60000);
+        showMessage('error', `Muitas tentativas. Tente novamente em ${timeLeft} minutos.`);
+        return false;
+    }
+    
+    return true;
+}
+
+function recordFailedAttempt(email) {
+    const now = Date.now();
+    if (!loginAttempts[email]) {
+        loginAttempts[email] = { count: 0, lastAttempt: now };
+    }
+    
+    loginAttempts[email].count++;
+    loginAttempts[email].lastAttempt = now;
+}
+
+function clearLoginAttempts(email) {
+    if (loginAttempts[email]) {
+        loginAttempts[email].count = 0;
+    }
+}
+
+// Exposição global das funções
+window.showModal = showModal;
+window.hideModal = hideModal;
+window.showLoginModal = showLoginModal;
+window.showRecuperarSenhaModal = showRecuperarSenhaModal;
+window.showCadastroModal = showCadastroModal;
+window.togglePasswordVisibility = togglePasswordVisibility;
 
 // Inicialização da aplicação
 document.addEventListener('DOMContentLoaded', function() {
     initializeApp();
 });
 
+// Função para garantir que o scroll da página esteja funcionando
+function ensurePageScroll() {
+    // Remove qualquer overflow hidden que possa estar bloqueando o scroll
+    document.body.style.overflow = '';
+    document.documentElement.style.overflow = '';
+    
+    // Força a definição de scroll automático
+    document.body.style.overflow = 'auto';
+    document.documentElement.style.overflow = 'auto';
+    
+    // Remove qualquer atributo de dataset que possa estar causando problemas
+    delete document.body.dataset.originalOverflow;
+    
+    console.log('📜 Scroll da página verificado e habilitado');
+}
+
+// Função de debug para verificar o status do scroll
+function debugScrollStatus() {
+    console.log('🔍 Status do Scroll:');
+    console.log('- Body overflow:', document.body.style.overflow || 'não definido');
+    console.log('- HTML overflow:', document.documentElement.style.overflow || 'não definido');
+    console.log('- Body height:', document.body.scrollHeight + 'px');
+    console.log('- Window height:', window.innerHeight + 'px');
+    console.log('- Scroll possível:', document.body.scrollHeight > window.innerHeight ? 'SIM' : 'NÃO');
+}
+
+// Expor função de debug globalmente
+window.debugScrollStatus = debugScrollStatus;
+
 function initializeApp() {
     try {
         console.log('🚀 Inicializando aplicação...');
+        
+        // Garantir que o scroll da página esteja funcionando
+        ensurePageScroll();
+        
+        // Verificar sessão do usuário primeiro
+        checkUserSession();
+        
         initializeMap();
         setupEventListeners();
         
@@ -70,10 +286,45 @@ function setupEventListeners() {
         contatoForm.addEventListener('submit', handleContatoSubmit);
     }
 
-    // Formulário de login
+    // Formulário de login unificado
     const loginForm = document.getElementById('form-login');
     if (loginForm) {
-        loginForm.addEventListener('submit', handleLoginSubmit);
+        loginForm.addEventListener('submit', handleLoginUnificadoSubmit);
+    }
+
+    // Formulário de recuperação de senha
+    const recuperarSenhaForm = document.getElementById('form-recuperar-senha');
+    if (recuperarSenhaForm) {
+        recuperarSenhaForm.addEventListener('submit', handleRecuperarSenhaSubmit);
+    }
+
+    // Formulário de cadastro
+    const cadastroForm = document.getElementById('form-cadastro-cidadao');
+    if (cadastroForm) {
+        cadastroForm.addEventListener('submit', handleCadastroSubmit);
+    }
+
+    // Verificação de força da senha em tempo real
+    const cadastroSenhaInput = document.getElementById('cadastro-senha');
+    if (cadastroSenhaInput) {
+        cadastroSenhaInput.addEventListener('input', (e) => {
+            checkPasswordStrength(e.target.value);
+        });
+    }
+
+    // Validação de confirmação de senha
+    const confirmarSenhaInput = document.getElementById('cadastro-confirmar-senha');
+    if (confirmarSenhaInput && cadastroSenhaInput) {
+        confirmarSenhaInput.addEventListener('input', () => {
+            const senha = cadastroSenhaInput.value;
+            const confirmar = confirmarSenhaInput.value;
+            
+            if (confirmar && senha !== confirmar) {
+                confirmarSenhaInput.setCustomValidity('As senhas não coincidem');
+            } else {
+                confirmarSenhaInput.setCustomValidity('');
+            }
+        });
     }
 
     // Upload de arquivo
@@ -93,6 +344,19 @@ function setupEventListeners() {
 
     // Filtros do mapa
     setupMapFilters();
+
+    // Auto-formatação do input de rastreamento
+    setupTrackingInput();
+    
+    // Verificação periódica do scroll (a cada 5 segundos)
+    setInterval(() => {
+        // Verifica se o body tem overflow hidden sem que haja um modal aberto
+        const openModals = document.querySelectorAll('.modal[style*="block"]');
+        if (openModals.length === 0 && document.body.style.overflow === 'hidden') {
+            console.log('⚠️ Scroll bloqueado sem modal aberto. Corrigindo...');
+            ensurePageScroll();
+        }
+    }, 5000);
 }
 
 // Inicialização do mapa
@@ -154,11 +418,17 @@ function showMapError() {
 // Função para buscar ocorrências da API
 async function loadOcorrencias() {
     try {
+        console.log('📍 Carregando ocorrências...', { userType: state.userType });
+        
         const response = await fetch(CONFIG.API_ENDPOINTS.ocorrencias);
         const result = await response.json();
         
-        if (result.success && result.data) {
-            state.ocorrencias = result.data.map(item => ({
+        if (result.success && result.data && result.data.ocorrencias) {
+            // Limpar marcadores existentes
+            state.markersLayer.clearLayers();
+            state.markers = [];
+            
+            state.ocorrencias = result.data.ocorrencias.map(item => ({
                 id: item.id,
                 codigo: item.codigo,
                 tipo: item.tipo,
@@ -174,21 +444,90 @@ async function loadOcorrencias() {
             }));
             
             // Adicionar marcadores no mapa
+            console.log('🗺️ Adicionando marcadores no mapa...', state.ocorrencias.length);
             state.ocorrencias.forEach(ocorrencia => {
-                const marker = createMapMarker(ocorrencia);
-                if (marker) {
-                    state.markersLayer.addLayer(marker);
-                    state.markers.push({ marker, ocorrencia });
+                console.log('📍 Processando ocorrência:', ocorrencia.codigo, ocorrencia.latitude, ocorrencia.longitude);
+                if (ocorrencia.latitude && ocorrencia.longitude) {
+                    const marker = createMapMarker(ocorrencia);
+                    if (marker) {
+                        state.markersLayer.addLayer(marker);
+                        state.markers.push({ marker, ocorrencia });
+                        console.log('✅ Marcador adicionado:', ocorrencia.codigo);
+                    } else {
+                        console.warn('❌ Falha ao criar marcador:', ocorrencia.codigo);
+                    }
+                } else {
+                    console.warn('⚠️ Ocorrência sem coordenadas:', ocorrencia.codigo);
                 }
             });
+            
+            // Mostrar informações sobre o carregamento
+            console.log(`✅ ${state.ocorrencias.length} ocorrências carregadas`, result.info);
+            
+            // Mostrar mensagem baseada no tipo de usuário
+            if (result.info) {
+                let message = '';
+                switch (result.info.tipo_usuario) {
+                    case 'admin':
+                        message = `Visualizando todas as ${result.info.total} ocorrências (Modo Administrador)`;
+                        break;
+                    case 'cidadao':
+                        message = `Visualizando suas ${result.info.total} ocorrências`;
+                        break;
+                    case 'publico':
+                        message = `Visualizando ${result.info.total} ocorrências públicas`;
+                        break;
+                }
+                
+                if (message) {
+                    showMapMessage(message);
+                }
+            }
+            
+            console.log('📍 Ocorrências carregadas com sucesso:', state.ocorrencias.length);
         } else {
-            console.warn('Nenhuma ocorrência encontrada ou erro na API');
+            console.error('Erro ao carregar ocorrências:', result.message);
+            showMessage('error', 'Erro ao carregar ocorrências');
         }
     } catch (error) {
-        console.error('Erro ao carregar ocorrências:', error);
-        // Fallback para dados de exemplo em caso de erro na API
-        loadSampleOcorrencias();
+        console.error('Erro ao buscar ocorrências:', error);
+        showMessage('error', 'Erro de conexão ao buscar ocorrências');
     }
+}
+
+function showMapMessage(message) {
+    // Procurar por elemento existente ou criar um novo
+    let messageEl = document.getElementById('map-message');
+    
+    if (!messageEl) {
+        messageEl = document.createElement('div');
+        messageEl.id = 'map-message';
+        messageEl.className = 'map-message';
+        
+        const mapContainer = document.querySelector('.mapa-container');
+        if (mapContainer) {
+            mapContainer.insertBefore(messageEl, mapContainer.firstChild);
+        }
+    }
+    
+    messageEl.innerHTML = `
+        <div class="message-content">
+            <i class="fas fa-info-circle"></i>
+            <span>${message}</span>
+        </div>
+    `;
+    
+    // Auto-hide depois de 5 segundos
+    setTimeout(() => {
+        if (messageEl && messageEl.parentNode) {
+            messageEl.style.opacity = '0';
+            setTimeout(() => {
+                if (messageEl && messageEl.parentNode) {
+                    messageEl.parentNode.removeChild(messageEl);
+                }
+            }, 300);
+        }
+    }, 5000);
 }
 
 function loadSampleOcorrencias() {
@@ -353,19 +692,26 @@ function createTempIcon() {
 }
 
 function createMapMarker(ocorrencia) {
-    if (!ocorrencia.coordenadas || ocorrencia.coordenadas.length !== 2) {
-        console.warn('Coordenadas inválidas para ocorrência:', ocorrencia);
-        return null;
-    }
-
-    const [lat, lng] = ocorrencia.coordenadas;
+    console.log('🎯 Criando marcador para:', ocorrencia.codigo, ocorrencia);
     
-    if (isNaN(lat) || isNaN(lng)) {
-        console.warn('Coordenadas numéricas inválidas:', lat, lng);
+    // Verificar coordenadas - podem vir como string ou number
+    let lat = ocorrencia.latitude || ocorrencia.coordenadas?.[0];
+    let lng = ocorrencia.longitude || ocorrencia.coordenadas?.[1];
+    
+    // Converter para número se necessário
+    lat = parseFloat(lat);
+    lng = parseFloat(lng);
+    
+    console.log('📍 Coordenadas processadas:', lat, lng);
+    
+    if (!lat || !lng || isNaN(lat) || isNaN(lng)) {
+        console.warn('❌ Coordenadas inválidas para ocorrência:', ocorrencia.codigo, lat, lng);
         return null;
     }
 
     const icon = createMarkerIcon(ocorrencia.status, ocorrencia.tipo);
+    
+    console.log('🎨 Criando marcador com icon:', icon);
     
     const marker = L.marker([lat, lng], { icon })
         .bindPopup(createPopupContent(ocorrencia), {
@@ -373,6 +719,7 @@ function createMapMarker(ocorrencia) {
             className: 'custom-popup'
         });
 
+    console.log('✅ Marcador criado com sucesso:', marker);
     return marker;
 }
 
@@ -628,17 +975,22 @@ async function handleOcorrenciaSubmit(e) {
 async function handleRastreamentoSubmit(e) {
     e.preventDefault();
     
-    const codigo = document.getElementById('id-ocorrencia').value;
+    const codigo = document.getElementById('id-ocorrencia').value.trim();
     const resultadoElement = document.getElementById('resultado-rastreamento');
     
-    if (!codigo.trim()) {
+    if (!codigo) {
         showMessage('error', 'Digite o código da ocorrência');
         return;
     }
     
     try {
         // Mostrar loading
-        resultadoElement.innerHTML = '<div class="loading"></div> Buscando informações...';
+        resultadoElement.innerHTML = `
+            <div class="loading-container">
+                <div class="loading-spinner"></div>
+                <p>Buscando informações da ocorrência...</p>
+            </div>
+        `;
         resultadoElement.style.display = 'block';
         
         // Buscar na API
@@ -649,22 +1001,53 @@ async function handleRastreamentoSubmit(e) {
             const ocorrencia = result.data;
             updateTrackingResult(ocorrencia);
             
-            // Centralizar mapa na ocorrência se existir
-            if (ocorrencia.latitude && ocorrencia.longitude) {
-                state.map.setView([parseFloat(ocorrencia.latitude), parseFloat(ocorrencia.longitude)], 16);
+            // Centralizar mapa na ocorrência se existir coordenadas
+            if (ocorrencia.latitude && ocorrencia.longitude && state.map) {
+                const lat = parseFloat(ocorrencia.latitude);
+                const lng = parseFloat(ocorrencia.longitude);
                 
-                // Destacar marcador correspondente
-                const markerData = state.markers.find(m => m.ocorrencia.codigo === codigo);
-                if (markerData) {
-                    markerData.marker.openPopup();
+                // Mover mapa para a localização
+                state.map.setView([lat, lng], 16);
+                
+                // Criar marcador temporário se não existir
+                if (state.tempTrackingMarker) {
+                    state.map.removeLayer(state.tempTrackingMarker);
                 }
+                
+                state.tempTrackingMarker = L.marker([lat, lng], {
+                    icon: L.divIcon({
+                        className: 'tracking-marker',
+                        html: '<i class="fas fa-map-marker-alt"></i>',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 30]
+                    })
+                }).addTo(state.map).bindPopup(`
+                    <strong>Ocorrência ${ocorrencia.codigo}</strong><br>
+                    ${ocorrencia.endereco}
+                `).openPopup();
+                
+                // Scroll suave para o mapa
+                document.getElementById('mapa').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
             }
         } else {
             resultadoElement.innerHTML = `
                 <div class="tracking-result error">
+                    <div class="error-icon">
+                        <i class="fas fa-exclamation-triangle"></i>
+                    </div>
                     <h4>Ocorrência não encontrada</h4>
-                    <p>O código "${codigo}" não foi encontrado em nosso sistema.</p>
-                    <p>Verifique se o código está correto ou entre em contato conosco.</p>
+                    <p>O código <strong>"${codigo}"</strong> não foi encontrado em nosso sistema.</p>
+                    <div class="error-suggestions">
+                        <p><strong>Sugestões:</strong></p>
+                        <ul>
+                            <li>Verifique se o código foi digitado corretamente</li>
+                            <li>O código deve ter o formato STM000000</li>
+                            <li>Entre em contato conosco se o problema persistir</li>
+                        </ul>
+                    </div>
                 </div>
             `;
         }
@@ -673,9 +1056,12 @@ async function handleRastreamentoSubmit(e) {
         console.error('Erro ao buscar ocorrência:', error);
         resultadoElement.innerHTML = `
             <div class="tracking-result error">
+                <div class="error-icon">
+                    <i class="fas fa-times-circle"></i>
+                </div>
                 <h4>Erro ao buscar informações</h4>
                 <p>Houve um problema ao buscar as informações da ocorrência.</p>
-                <p>Tente novamente mais tarde.</p>
+                <p>Tente novamente em alguns instantes.</p>
             </div>
         `;
     }
@@ -684,48 +1070,200 @@ async function handleRastreamentoSubmit(e) {
 function updateTrackingResult(ocorrencia) {
     const resultadoElement = document.getElementById('resultado-rastreamento');
     
+    // Mapa de status com cores e ícones
     const statusMap = {
-        'pendente': { label: 'Pendente', class: 'pendente' },
-        'em_analise': { label: 'Em Análise', class: 'em-analise' },
-        'em_andamento': { label: 'Em Andamento', class: 'em-andamento' },
-        'concluida': { label: 'Concluída', class: 'concluida' },
-        'cancelada': { label: 'Cancelada', class: 'cancelada' }
+        'pendente': { 
+            label: 'Pendente', 
+            class: 'pendente', 
+            icon: 'fas fa-clock',
+            description: 'Aguardando análise da equipe técnica'
+        },
+        'em_andamento': { 
+            label: 'Em Andamento', 
+            class: 'em-andamento', 
+            icon: 'fas fa-tools',
+            description: 'Equipe está trabalhando na resolução'
+        },
+        'concluida': { 
+            label: 'Concluída', 
+            class: 'concluida', 
+            icon: 'fas fa-check-circle',
+            description: 'Problema resolvido com sucesso!'
+        },
+        'cancelada': { 
+            label: 'Cancelada', 
+            class: 'cancelada', 
+            icon: 'fas fa-times-circle',
+            description: 'Ocorrência cancelada'
+        }
     };
     
-    const statusInfo = statusMap[ocorrencia.status] || { label: ocorrencia.status, class: 'pendente' };
+    const statusInfo = statusMap[ocorrencia.status] || { 
+        label: ocorrencia.status, 
+        class: 'pendente', 
+        icon: 'fas fa-question-circle',
+        description: 'Status em análise'
+    };
+    
+    // Formatação do tipo
+    const tipoFormatado = ocorrencia.tipo.charAt(0).toUpperCase() + ocorrencia.tipo.slice(1).replace('_', ' ');
     
     resultadoElement.innerHTML = `
-        <div class="tracking-result">
-            <h4>Detalhes da Ocorrência</h4>
-            <div class="tracking-info">
-                <p><strong>Código:</strong> ${ocorrencia.codigo}</p>
-                <p><strong>Status:</strong> <span class="status ${statusInfo.class}">${statusInfo.label}</span></p>
-                <p><strong>Tipo:</strong> ${ocorrencia.tipo}</p>
-                <p><strong>Data:</strong> ${new Date(ocorrencia.data_criacao).toLocaleDateString('pt-BR')}</p>
-                <p><strong>Endereço:</strong> ${ocorrencia.endereco}</p>
-                <p><strong>Descrição:</strong> ${ocorrencia.descricao}</p>
-                <p><strong>Cidadão:</strong> ${ocorrencia.nome_cidadao}</p>
+        <div class="tracking-result success">
+            <div class="tracking-header">
+                <div class="tracking-code">
+                    <i class="fas fa-barcode"></i>
+                    <span>Código: <strong>${ocorrencia.codigo}</strong></span>
+                </div>
+                <div class="tracking-status ${statusInfo.class}">
+                    <i class="${statusInfo.icon}"></i>
+                    <span>${statusInfo.label}</span>
+                </div>
             </div>
+            
+            <div class="tracking-details">
+                <div class="detail-section">
+                    <h5><i class="fas fa-info-circle"></i> Informações da Ocorrência</h5>
+                    <div class="detail-grid">
+                        <div class="detail-item">
+                            <label>Tipo:</label>
+                            <span>${tipoFormatado}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Data de Registro:</label>
+                            <span>${ocorrencia.data_criacao_formatada}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Endereço:</label>
+                            <span>${ocorrencia.endereco}</span>
+                        </div>
+                        <div class="detail-item">
+                            <label>Solicitante:</label>
+                            <span>${ocorrencia.nome_cidadao || 'Anônimo'}</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="detail-section">
+                    <h5><i class="fas fa-file-alt"></i> Descrição</h5>
+                    <p class="description">${ocorrencia.descricao}</p>
+                </div>
+                
+                ${ocorrencia.observacoes ? `
+                <div class="detail-section">
+                    <h5><i class="fas fa-comment"></i> Observações da Equipe</h5>
+                    <p class="observations">${ocorrencia.observacoes}</p>
+                </div>
+                ` : ''}
+                
+                <div class="detail-section">
+                    <h5><i class="fas fa-clock"></i> Tempo de Processamento</h5>
+                    <p class="processing-time">
+                        Tempo decorrido: <strong>${ocorrencia.tempo_processamento.tempo_decorrido}</strong>
+                        ${ocorrencia.tempo_processamento.tempo_resolucao ? 
+                            `<br>Resolvida em: <strong>${ocorrencia.tempo_processamento.tempo_resolucao}</strong>` : ''}
+                    </p>
+                </div>
+            </div>
+            
             <div class="status-timeline">
-                <div class="timeline-item ${['pendente', 'em_analise', 'em_andamento', 'concluida'].includes(ocorrencia.status) ? 'completed' : ''}">
-                    <i class="fas fa-check"></i>
-                    <span>Ocorrência Registrada</span>
+                <h5><i class="fas fa-route"></i> Acompanhamento</h5>
+                <div class="timeline">
+                    ${ocorrencia.timeline.map(item => `
+                        <div class="timeline-item ${item.concluido ? 'completed' : ''} ${item.ativo ? 'active' : ''}">
+                            <div class="timeline-marker" style="border-color: ${getTimelineColor(item.cor)}">
+                                <i class="${item.icon}" style="color: ${getTimelineColor(item.cor)}"></i>
+                            </div>
+                            <div class="timeline-content">
+                                <h6>${item.titulo}</h6>
+                                <p>${item.descricao}</p>
+                                ${item.data_formatada ? `<small>${item.data_formatada}</small>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
                 </div>
-                <div class="timeline-item ${['em_analise', 'em_andamento', 'concluida'].includes(ocorrencia.status) ? 'completed' : ''} ${ocorrencia.status === 'em_analise' ? 'active' : ''}">
-                    <i class="fas fa-eye"></i>
-                    <span>Em Análise</span>
-                </div>
-                <div class="timeline-item ${['em_andamento', 'concluida'].includes(ocorrencia.status) ? 'completed' : ''} ${ocorrencia.status === 'em_andamento' ? 'active' : ''}">
-                    <i class="fas fa-tools"></i>
-                    <span>Em Andamento</span>
-                </div>
-                <div class="timeline-item ${ocorrencia.status === 'concluida' ? 'completed active' : ''}">
-                    <i class="fas fa-flag-checkered"></i>
-                    <span>Concluída</span>
-                </div>
+            </div>
+            
+            <div class="tracking-actions">
+                <button type="button" class="btn btn-secondary" onclick="clearTrackingResult()">
+                    <i class="fas fa-search"></i> Nova Busca
+                </button>
+                ${ocorrencia.latitude && ocorrencia.longitude ? `
+                <button type="button" class="btn btn-primary" onclick="focusOnMap(${ocorrencia.latitude}, ${ocorrencia.longitude})">
+                    <i class="fas fa-map-marker-alt"></i> Ver no Mapa
+                </button>
+                ` : ''}
             </div>
         </div>
     `;
+}
+
+function getTimelineColor(cor) {
+    const colors = {
+        'blue': '#0B3A60',
+        'orange': '#FFA500',
+        'green': '#28a745',
+        'red': '#dc3545',
+        'gray': '#6c757d'
+    };
+    return colors[cor] || colors.blue;
+}
+
+function clearTrackingResult() {
+    const resultadoElement = document.getElementById('resultado-rastreamento');
+    resultadoElement.style.display = 'none';
+    document.getElementById('id-ocorrencia').value = '';
+    
+    // Remover marcador temporário do mapa
+    if (state.tempTrackingMarker && state.map) {
+        state.map.removeLayer(state.tempTrackingMarker);
+        state.tempTrackingMarker = null;
+    }
+}
+
+function focusOnMap(lat, lng) {
+    if (state.map) {
+        state.map.setView([lat, lng], 18);
+        document.getElementById('mapa').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+        });
+    }
+}
+
+// Função para testar códigos de exemplo
+function testarCodigo(codigo) {
+    document.getElementById('id-ocorrencia').value = codigo;
+    document.getElementById('form-rastreamento').dispatchEvent(new Event('submit'));
+}
+
+// Expor função globalmente
+window.testarCodigo = testarCodigo;
+
+function clearTrackingResult() {
+    const resultadoElement = document.getElementById('resultado-rastreamento');
+    const inputElement = document.getElementById('id-ocorrencia');
+    
+    resultadoElement.style.display = 'none';
+    resultadoElement.innerHTML = '';
+    inputElement.value = '';
+    inputElement.focus();
+    
+    // Remover marcador temporário se existir
+    if (state.tempTrackingMarker && state.map) {
+        state.map.removeLayer(state.tempTrackingMarker);
+        state.tempTrackingMarker = null;
+    }
+}
+
+function focusOnMap(lat, lng) {
+    if (state.map) {
+        state.map.setView([lat, lng], 16);
+        document.getElementById('mapa').scrollIntoView({ 
+            behavior: 'smooth', 
+            block: 'center' 
+        });
+    }
 }
 
 async function handleContatoSubmit(e) {
@@ -949,6 +1487,44 @@ function setupSmoothScrolling() {
 }
 
 function setupModalEvents() {
+    // Eventos para fechar modais
+    document.addEventListener('click', (e) => {
+        // Fechar modal clicando no X
+        if (e.target.classList.contains('close-modal')) {
+            const modal = e.target.closest('.modal');
+            if (modal) {
+                hideModal(modal.id);
+                // Garantir que o scroll seja restaurado
+                ensurePageScroll();
+            }
+        }
+        
+        // Fechar modal clicando fora do conteúdo
+        if (e.target.classList.contains('modal')) {
+            hideModal(e.target.id);
+            // Garantir que o scroll seja restaurado
+            ensurePageScroll();
+        }
+    });
+
+    // Fechar modal com ESC
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const openModals = document.querySelectorAll('.modal[style*="block"]');
+            openModals.forEach(modal => {
+                hideModal(modal.id);
+            });
+            // Garantir que o scroll seja restaurado
+            ensurePageScroll();
+        }
+    });
+
+    // Configurar formulário de login do cidadão
+    const formLoginCidadao = document.getElementById('form-login-cidadao');
+    if (formLoginCidadao) {
+        formLoginCidadao.addEventListener('submit', handleCidadaoLoginSubmit);
+    }
+    
     // Eventos para abrir modais específicos
     const loginBtn = document.getElementById('btn-login');
     if (loginBtn) {
@@ -1102,10 +1678,14 @@ async function loadEstatisticas() {
         if (data.success && data.data) {
             console.log('✅ Dados válidos recebidos:', data.data);
             
+            // Acessar os dados do resumo
+            const resumo = data.data.resumo || {};
+            console.log('📊 Dados do resumo:', resumo);
+            
             // Atualizar estatísticas com os dados corretos da API
-            updateStatElement('ocorrencias-resolvidas', data.data.ocorrencias_resolvidas || 0);
-            updateStatElement('satisfacao', data.data.satisfacao || 0);
-            updateStatElement('horas-medias', data.data.horas_medias || 0);
+            updateStatElement('ocorrencias-resolvidas', resumo.concluidas || 0);
+            updateStatElement('satisfacao', resumo.taxa_satisfacao || 0);
+            updateStatElement('horas-medias', resumo.tempo_medio_resolucao || 0);
             
             console.log('✅ Estatísticas atualizadas com sucesso');
         } else {
@@ -1215,3 +1795,1039 @@ window.cidadeAberta = {
         marker.bindPopup('Marcador de teste').openPopup();
     }
 };
+
+// Funções de suporte ao rastreamento
+function setupTrackingInput() {
+    const input = document.getElementById('id-ocorrencia');
+    if (input) {
+        input.addEventListener('input', function(e) {
+            let valor = e.target.value.toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (valor.length > 3 && !valor.startsWith('STM')) {
+                valor = 'STM' + valor.slice(3);
+            }
+            e.target.value = valor;
+        });
+    }
+}
+
+function testarCodigo(codigo) {
+    const input = document.getElementById('id-ocorrencia');
+    if (input) {
+        input.value = codigo;
+        input.focus();
+        
+        // Disparar evento de submit do formulário
+        const form = document.getElementById('form-rastreamento');
+        if (form) {
+            const event = new Event('submit', {
+                bubbles: true,
+                cancelable: true
+            });
+            form.dispatchEvent(event);
+        }
+    }
+}
+
+// Função global para testar códigos (usada nos botões HTML)
+window.testarCodigo = testarCodigo;
+
+// Funções de Autenticação e Sessão
+async function checkUserSession() {
+    try {
+        const response = await fetch(CONFIG.API_ENDPOINTS.sessao);
+        const result = await response.json();
+        
+        if (result.success && result.authenticated) {
+            state.currentUser = result.user;
+            state.isAuthenticated = true;
+            state.userType = result.user.tipo;
+            
+            console.log('👤 Usuário autenticado:', result.user);
+            updateUIForAuthenticatedUser();
+        } else {
+            state.currentUser = null;
+            state.isAuthenticated = false;
+            state.userType = null;
+            updateUIForGuestUser();
+        }
+    } catch (error) {
+        console.error('Erro ao verificar sessão:', error);
+        state.currentUser = null;
+        state.isAuthenticated = false;
+        state.userType = null;
+        updateUIForGuestUser();
+    }
+}
+
+function updateUIForAuthenticatedUser() {
+    const loginButton = document.querySelector('.btn-nav.btn-login');
+    if (loginButton && state.currentUser) {
+        if (state.userType === 'admin') {
+            loginButton.innerHTML = `
+                <i class="fas fa-user-shield"></i>
+                <span>Admin: ${state.currentUser.nome}</span>
+            `;
+            loginButton.setAttribute('data-admin', 'true');
+            loginButton.onclick = showAdminPanel;
+        } else if (state.userType === 'cidadao') {
+            loginButton.innerHTML = `
+                <i class="fas fa-user"></i>
+                <span>${state.currentUser.nome}</span>
+            `;
+            loginButton.removeAttribute('data-admin');
+            loginButton.onclick = showCidadaoPanel;
+        }
+    }
+    
+    // Atualizar interface baseada no tipo de usuário
+    if (state.userType === 'admin') {
+        showAdminFeatures();
+    } else if (state.userType === 'cidadao') {
+        showCidadaoFeatures();
+    }
+}
+
+function updateUIForGuestUser() {
+    const loginButton = document.querySelector('.btn-nav.btn-login');
+    if (loginButton) {
+        loginButton.innerHTML = `
+            <i class="fas fa-sign-in-alt"></i>
+            <span>Entrar</span>
+        `;
+        loginButton.onclick = () => showModal('login-modal');
+    }
+    hideAdminFeatures();
+}
+
+function showAdminFeatures() {
+    // Mostrar recursos administrativos
+    console.log('👑 Modo Administrador ativado');
+    
+    // Carregar todas as ocorrências
+    loadOcorrencias();
+    
+    // Adicionar botão de logout
+    addLogoutButton();
+}
+
+function showCidadaoFeatures() {
+    // Mostrar recursos do cidadão
+    console.log('👤 Modo Cidadão ativado');
+    
+    // Carregar apenas ocorrências do cidadão
+    loadOcorrencias();
+    
+    // Adicionar botão de logout
+    addLogoutButton();
+}
+
+function hideAdminFeatures() {
+    // Esconder recursos administrativos
+    const logoutBtn = document.getElementById('logout-btn');
+    if (logoutBtn) {
+        logoutBtn.remove();
+    }
+}
+
+function addLogoutButton() {
+    // Verificar se já existe
+    if (document.getElementById('logout-btn')) return;
+    
+    const navbar = document.querySelector('.nav-menu');
+    if (navbar) {
+        const logoutItem = document.createElement('li');
+        logoutItem.className = 'nav-item';
+        logoutItem.innerHTML = `
+            <a href="#" class="nav-link" id="logout-btn" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Sair
+            </a>
+        `;
+        navbar.appendChild(logoutItem);
+    }
+}
+
+async function logout() {
+    try {
+        await fetch(CONFIG.API_ENDPOINTS.sessao, {
+            method: 'POST'
+        });
+        
+        // Limpar estado
+        state.currentUser = null;
+        state.isAuthenticated = false;
+        state.userType = null;
+        
+        // Atualizar interface
+        updateUIForGuestUser();
+        
+        // Recarregar ocorrências (modo público)
+        loadOcorrencias();
+        
+        showMessage('success', 'Logout realizado com sucesso!');
+        
+    } catch (error) {
+        console.error('Erro no logout:', error);
+        showMessage('error', 'Erro ao fazer logout');
+    }
+}
+
+function showAdminPanel() {
+    // Criar modal com opções administrativas
+    const modalHTML = `
+        <div id="admin-options-modal" class="modal" style="display: block;">
+            <div class="modal-content" style="max-width: 500px;">
+                <div class="modal-header">
+                    <h2><i class="fas fa-user-shield"></i> Painel Administrativo</h2>
+                    <span class="close" onclick="hideModal('admin-options-modal')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <p><strong>Bem-vindo, ${state.currentUser.nome}!</strong></p>
+                    <p>Escolha uma das opções administrativas:</p>
+                    
+                    <div style="display: grid; gap: 15px; margin: 20px 0;">
+                        <button onclick="openAdminDashboard()" class="admin-option-btn">
+                            <i class="fas fa-tachometer-alt"></i>
+                            <div>
+                                <strong>Painel Completo</strong>
+                                <small>Gerenciamento de usuários, logs e configurações</small>
+                            </div>
+                        </button>
+                        
+                        <button onclick="showOcorrenciasAdmin()" class="admin-option-btn">
+                            <i class="fas fa-list"></i>
+                            <div>
+                                <strong>Gerenciar Ocorrências</strong>
+                                <small>Visualizar e atualizar todas as ocorrências</small>
+                            </div>
+                        </button>
+                        
+                        <button onclick="showRelatorios()" class="admin-option-btn">
+                            <i class="fas fa-chart-bar"></i>
+                            <div>
+                                <strong>Relatórios</strong>
+                                <small>Estatísticas e análises do sistema</small>
+                            </div>
+                        </button>
+                        
+                        <button onclick="logout()" class="admin-option-btn logout-btn">
+                            <i class="fas fa-sign-out-alt"></i>
+                            <div>
+                                <strong>Sair</strong>
+                                <small>Fazer logout do sistema</small>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // Remover modal existente se houver
+    const existingModal = document.getElementById('admin-options-modal');
+    if (existingModal) {
+        existingModal.remove();
+    }
+    
+    // Adicionar novo modal
+    document.body.insertAdjacentHTML('beforeend', modalHTML);
+    
+    // Bloquear scroll
+    document.body.style.overflow = 'hidden';
+}
+
+function showCidadaoPanel() {
+    // Mostrar painel do cidadão
+    showMessage('info', 'Painel do cidadão em desenvolvimento. Use a consulta pública para acompanhar suas ocorrências.');
+}
+
+// Funções do painel administrativo
+function openAdminDashboard() {
+    hideModal('admin-options-modal');
+    showMessage('info', 'Redirecionando para o painel administrativo...');
+    
+    // Redirecionar para o painel admin
+    setTimeout(() => {
+        window.open('./admin/index.html', '_blank');
+    }, 1000);
+}
+
+function showOcorrenciasAdmin() {
+    hideModal('admin-options-modal');
+    showMessage('info', 'Redirecionando para gerenciamento de ocorrências...');
+    
+    // Redirecionar para a página de gerenciamento
+    setTimeout(() => {
+        window.open('./admin/gerenciar-ocorrencias.html', '_blank');
+    }, 1000);
+}
+
+function showRelatorios() {
+    hideModal('admin-options-modal');
+    showMessage('info', 'Carregando relatórios e estatísticas...');
+    
+    // Mostrar estatísticas detalhadas
+    loadEstatatisticasAdmin();
+}
+
+function addAdminControls() {
+    // Adicionar controles administrativos à interface
+    const header = document.querySelector('.header-stats');
+    if (header && !document.getElementById('admin-controls')) {
+        const adminControls = document.createElement('div');
+        adminControls.id = 'admin-controls';
+        adminControls.innerHTML = `
+            <div style="background: linear-gradient(135deg, #2c3e50, #34495e); color: white; padding: 15px; margin: 10px 0; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.2);">
+                <h4><i class="fas fa-user-shield"></i> Modo Administrativo</h4>
+                <div style="display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap;">
+                    <button onclick="openAdminDashboard()" class="btn-admin-control">
+                        <i class="fas fa-tachometer-alt"></i> Painel Completo
+                    </button>
+                    <button onclick="exportarDados()" class="btn-admin-control">
+                        <i class="fas fa-download"></i> Exportar Dados
+                    </button>
+                    <button onclick="showBackup()" class="btn-admin-control">
+                        <i class="fas fa-database"></i> Backup
+                    </button>
+                </div>
+            </div>
+        `;
+        header.insertAdjacentElement('afterend', adminControls);
+    }
+}
+
+function loadEstatatisticasAdmin() {
+    // Carregar estatísticas administrativas detalhadas
+    console.log('📊 Carregando estatísticas administrativas...');
+    // Esta função pode ser expandida para mostrar relatórios detalhados
+}
+
+function exportarDados() {
+    showMessage('info', 'Preparando exportação de dados...');
+    // Implementar exportação de dados
+}
+
+function showBackup() {
+    showMessage('info', 'Funcionalidade de backup em desenvolvimento...');
+    // Implementar backup
+}
+
+// Função global para logout
+window.logout = logout;
+
+// Funções globais para o painel admin
+window.openAdminDashboard = openAdminDashboard;
+window.showOcorrenciasAdmin = showOcorrenciasAdmin;
+window.showRelatorios = showRelatorios;
+window.exportarDados = exportarDados;
+window.showBackup = showBackup;
+
+// Função de Login Unificado - HandleSubmit
+async function handleLoginUnificadoSubmit(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('login-email').value.trim();
+    const senha = document.getElementById('login-senha').value;
+    const lembrarLogin = document.getElementById('lembrar-login-unificado').checked;
+    const submitButton = e.target.querySelector('.btn');
+    
+    // Validações de segurança
+    if (!email) {
+        showMessage('error', 'Digite seu email ou usuário');
+        return;
+    }
+    
+    if (!senha) {
+        showMessage('error', 'Digite sua senha');
+        return;
+    }
+    
+    if (senha.length < 6) {
+        showMessage('error', 'Senha deve ter pelo menos 6 caracteres');
+        return;
+    }
+    
+    // Verificar tentativas de login
+    if (!checkLoginAttempts(email)) {
+        showMessage('error', 'Muitas tentativas de login. Tente novamente em 15 minutos.');
+        return;
+    }
+    
+    try {
+        // Mostrar loading
+        const originalText = submitButton.innerHTML;
+        submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+        submitButton.disabled = true;
+        
+        const response = await fetch(CONFIG.API_ENDPOINTS.login, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                email: email,
+                senha: senha,
+                lembrar: lembrarLogin
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Login bem-sucedido
+            clearLoginAttempts(email);
+            
+            // Atualizar estado da aplicação
+            state.currentUser = result.user;
+            state.isAuthenticated = true;
+            state.userType = result.user_type;
+            
+            // Fechar modal
+            hideModal('login-modal');
+            
+            // Atualizar interface baseada no tipo de usuário
+            updateUIForAuthenticatedUser();
+            
+            // Recarregar dados baseado no tipo de usuário
+            loadOcorrencias();
+            
+            // Mostrar mensagem de sucesso
+            let welcomeMessage = `Bem-vindo, ${result.user.nome}!`;
+            if (result.user_type === 'admin') {
+                welcomeMessage += ' (Modo Administrativo)';
+            }
+            
+            showMessage('success', welcomeMessage);
+            
+            console.log(`🎉 Login ${result.user_type} realizado:`, result.user);
+            
+        } else {
+            // Login falhou
+            recordFailedAttempt(email);
+            showMessage('error', result.message);
+        }
+        
+    } catch (error) {
+        console.error('Erro no login:', error);
+        recordFailedAttempt(email);
+        showMessage('error', 'Erro ao conectar com o servidor. Tente novamente.');
+        
+    } finally {
+        // Restaurar botão
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    }
+}
+
+// Função de Login do Cidadão - HandleSubmit
+async function handleCidadaoLoginSubmit(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('cidadao-email').value.trim();
+    const senha = document.getElementById('cidadao-senha').value;
+    const lembrarLogin = document.getElementById('lembrar-login').checked;
+    const submitButton = e.target.querySelector('.btn');
+    
+    // Validações de segurança
+    if (!email) {
+        showMessage('error', 'Digite seu email');
+        return;
+    }
+    
+    if (!isValidEmail(email)) {
+        showMessage('error', 'Digite um email válido');
+        return;
+    }
+    
+    if (!senha) {
+        showMessage('error', 'Digite sua senha');
+        return;
+    }
+    
+    if (senha.length < 6) {
+        showMessage('error', 'Senha deve ter pelo menos 6 caracteres');
+        return;
+    }
+    
+    // Verificar tentativas de login
+    if (!checkLoginAttempts(email)) {
+        return;
+    }
+    
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '<div class="loading-spinner"></div> Verificando...';
+    submitButton.disabled = true;
+    
+    try {
+        const response = await fetch(CONFIG.API_ENDPOINTS.loginCidadao, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                email: email,
+                senha: hashPassword(senha),
+                lembrar: lembrarLogin
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Limpar tentativas de login
+            clearLoginAttempts(email);
+            
+            // Atualizar estado do usuário
+            state.currentUser = result.data;
+            state.isAuthenticated = true;
+            state.userType = 'cidadao';
+            
+            // Fechar modal
+            hideModal('cidadao-modal');
+            
+            // Atualizar interface
+            updateUIForAuthenticatedUser();
+            
+            // Carregar ocorrências do cidadão
+            loadOcorrencias();
+            
+            showMessage('success', `Bem-vindo(a), ${result.data.nome}! Você tem ${result.data.total_ocorrencias} ocorrência(s) registrada(s).`);
+            
+            // Limpar formulário
+            document.getElementById('form-login-cidadao').reset();
+            
+        } else {
+            // Registrar tentativa falhada
+            recordFailedAttempt(email);
+            
+            const attemptsLeft = MAX_ATTEMPTS - (loginAttempts[email]?.count || 0);
+            if (attemptsLeft > 0) {
+                showMessage('error', `${result.message}. Tentativas restantes: ${attemptsLeft}`);
+            } else {
+                showMessage('error', 'Conta temporariamente bloqueada por segurança.');
+            }
+        }
+        
+    } catch (error) {
+        console.error('Erro no login do cidadão:', error);
+        showMessage('error', 'Erro ao fazer login. Tente novamente.');
+    } finally {
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    }
+}
+
+// Função para recuperação de senha
+async function handleRecuperarSenhaSubmit(e) {
+    e.preventDefault();
+    
+    const email = document.getElementById('recuperar-email').value.trim();
+    const submitButton = e.target.querySelector('.btn');
+    
+    if (!isValidEmail(email)) {
+        showMessage('error', 'Digite um email válido');
+        return;
+    }
+    
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '<div class="loading-spinner"></div> Enviando...';
+    submitButton.disabled = true;
+    
+    try {
+        const response = await fetch('./api/recuperar_senha.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showMessage('success', 'Instruções enviadas para seu email!');
+            hideModal('recuperar-senha-modal');
+            document.getElementById('form-recuperar-senha').reset();
+        } else {
+            showMessage('error', result.message);
+        }
+        
+    } catch (error) {
+        console.error('Erro na recuperação:', error);
+        showMessage('error', 'Erro ao enviar instruções. Tente novamente.');
+    } finally {
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    }
+}
+
+// Função para cadastro
+async function handleCadastroSubmit(e) {
+    e.preventDefault();
+    
+    const nome = document.getElementById('cadastro-nome').value.trim();
+    const email = document.getElementById('cadastro-email').value.trim();
+    const senha = document.getElementById('cadastro-senha').value;
+    const confirmarSenha = document.getElementById('cadastro-confirmar-senha').value;
+    const aceitarTermos = document.getElementById('aceitar-termos').checked;
+    const submitButton = e.target.querySelector('.btn');
+    
+    // Validações
+    if (!nome || nome.length < 2) {
+        showMessage('error', 'Digite seu nome completo');
+        return;
+    }
+    
+    if (!isValidEmail(email)) {
+        showMessage('error', 'Digite um email válido');
+        return;
+    }
+    
+    if (senha.length < 8) {
+        showMessage('error', 'Senha deve ter pelo menos 8 caracteres');
+        return;
+    }
+    
+    if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(senha)) {
+        showMessage('error', 'Senha deve conter maiúscula, minúscula e número');
+        return;
+    }
+    
+    if (senha !== confirmarSenha) {
+        showMessage('error', 'Senhas não coincidem');
+        return;
+    }
+    
+    if (!aceitarTermos) {
+        showMessage('error', 'Aceite os termos de uso para continuar');
+        return;
+    }
+    
+    const originalText = submitButton.innerHTML;
+    submitButton.innerHTML = '<div class="loading-spinner"></div> Cadastrando...';
+    submitButton.disabled = true;
+    
+    try {
+        const response = await fetch('./api/cadastro_cidadao.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                nome,
+                email,
+                senha: hashPassword(senha)
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showMessage('success', 'Cadastro realizado com sucesso! Faça login para continuar.');
+            hideModal('cadastro-modal');
+            showCidadaoLoginModal();
+            document.getElementById('form-cadastro-cidadao').reset();
+        } else {
+            showMessage('error', result.message);
+        }
+        
+    } catch (error) {
+        console.error('Erro no cadastro:', error);
+        showMessage('error', 'Erro ao criar conta. Tente novamente.');
+    } finally {
+        submitButton.innerHTML = originalText;
+        submitButton.disabled = false;
+    }
+}
+
+// === ENHANCED ANIMATIONS AND ACCESSIBILITY === //
+
+// Animation Observer for scroll-triggered animations
+const observerOptions = {
+    threshold: 0.1,
+    rootMargin: '0px 0px -50px 0px'
+};
+
+const animationObserver = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+        if (entry.isIntersecting) {
+            const element = entry.target;
+            
+            // Add animation class based on data attribute
+            const animationType = element.dataset.animation;
+            if (animationType) {
+                element.classList.add(`animate-${animationType}`);
+            }
+            
+            // Reveal elements
+            if (element.classList.contains('reveal')) {
+                element.classList.add('active');
+            }
+            
+            // Staggered animations
+            if (element.classList.contains('stagger-animation')) {
+                element.classList.add('animate');
+            }
+            
+            // Stop observing this element
+            animationObserver.unobserve(element);
+        }
+    });
+}, observerOptions);
+
+// Initialize animations on page load
+function initAnimations() {
+    // Observe elements with animation data attributes
+    document.querySelectorAll('[data-animation]').forEach(el => {
+        animationObserver.observe(el);
+    });
+    
+    // Observe reveal elements
+    document.querySelectorAll('.reveal').forEach(el => {
+        animationObserver.observe(el);
+    });
+    
+    // Observe stagger animation containers
+    document.querySelectorAll('.stagger-animation').forEach(el => {
+        animationObserver.observe(el);
+    });
+    
+    // Add page enter animation
+    document.body.classList.add('page-enter');
+    
+    // Add hover animations to cards
+    document.querySelectorAll('.card').forEach(card => {
+        card.classList.add('hover-lift');
+    });
+    
+    // Add hover animations to buttons
+    document.querySelectorAll('.btn').forEach(btn => {
+        btn.classList.add('hover-scale');
+    });
+}
+
+// Enhanced Form Validation with Accessibility
+function validateFormField(field) {
+    const value = field.value.trim();
+    const fieldName = field.name;
+    const errorElement = document.getElementById(`${field.id}-error`);
+    let isValid = true;
+    let errorMessage = '';
+    
+    // Clear previous error state
+    field.setAttribute('aria-invalid', 'false');
+    if (errorElement) {
+        errorElement.textContent = '';
+    }
+    
+    // Required field validation
+    if (field.hasAttribute('required') && !value) {
+        isValid = false;
+        errorMessage = 'Este campo é obrigatório.';
+    }
+    
+    // Email validation
+    if (field.type === 'email' && value) {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(value)) {
+            isValid = false;
+            errorMessage = 'Por favor, insira um e-mail válido.';
+        }
+    }
+    
+    // Password validation
+    if (field.type === 'password' && value) {
+        if (value.length < 6) {
+            isValid = false;
+            errorMessage = 'A senha deve ter pelo menos 6 caracteres.';
+        }
+    }
+    
+    // Phone validation (Brazilian format)
+    if (field.type === 'tel' && value) {
+        const phoneRegex = /^\(\d{2}\)\s?\d{4,5}-?\d{4}$/;
+        if (!phoneRegex.test(value)) {
+            isValid = false;
+            errorMessage = 'Por favor, insira um telefone válido. Ex: (93) 99999-9999';
+        }
+    }
+    
+    // Update field state
+    if (!isValid) {
+        field.setAttribute('aria-invalid', 'true');
+        if (errorElement) {
+            errorElement.textContent = errorMessage;
+            // Announce error to screen readers
+            errorElement.setAttribute('aria-live', 'polite');
+        }
+        field.classList.add('error');
+    } else {
+        field.classList.remove('error');
+    }
+    
+    return isValid;
+}
+
+// Form Validation Setup
+function setupFormValidation() {
+    // Add real-time validation to all form inputs
+    document.querySelectorAll('input, select, textarea').forEach(field => {
+        field.addEventListener('blur', () => validateFormField(field));
+        field.addEventListener('input', () => {
+            // Clear error state on input
+            if (field.getAttribute('aria-invalid') === 'true') {
+                validateFormField(field);
+            }
+        });
+    });
+    
+    // Enhanced form submission
+    document.querySelectorAll('form').forEach(form => {
+        form.addEventListener('submit', (e) => {
+            let isFormValid = true;
+            
+            // Validate all fields
+            form.querySelectorAll('input, select, textarea').forEach(field => {
+                if (!validateFormField(field)) {
+                    isFormValid = false;
+                }
+            });
+            
+            if (!isFormValid) {
+                e.preventDefault();
+                
+                // Focus first invalid field
+                const firstInvalidField = form.querySelector('[aria-invalid="true"]');
+                if (firstInvalidField) {
+                    firstInvalidField.focus();
+                    // Add shake animation to form
+                    form.style.animation = 'shake 0.5s ease-in-out';
+                    setTimeout(() => {
+                        form.style.animation = '';
+                    }, 500);
+                }
+                
+                // Announce validation errors
+                const errorCount = form.querySelectorAll('[aria-invalid="true"]').length;
+                announceToScreenReader(`Formulário contém ${errorCount} erro${errorCount > 1 ? 's' : ''}. Por favor, corrija os campos destacados.`);
+            }
+        });
+    });
+}
+
+// Accessibility Announcements
+function announceToScreenReader(message) {
+    // Create live region if it doesn't exist
+    let liveRegion = document.getElementById('sr-live-region');
+    if (!liveRegion) {
+        liveRegion = document.createElement('div');
+        liveRegion.id = 'sr-live-region';
+        liveRegion.setAttribute('aria-live', 'polite');
+        liveRegion.setAttribute('aria-atomic', 'true');
+        liveRegion.className = 'sr-only';
+        document.body.appendChild(liveRegion);
+    }
+    
+    // Clear and set new message
+    liveRegion.textContent = '';
+    setTimeout(() => {
+        liveRegion.textContent = message;
+    }, 100);
+}
+
+// Enhanced Modal Accessibility
+function enhanceModalAccessibility() {
+    document.querySelectorAll('.modal').forEach(modal => {
+        // Set initial ARIA attributes
+        modal.setAttribute('aria-hidden', 'true');
+        modal.setAttribute('role', 'dialog');
+        modal.setAttribute('aria-modal', 'true');
+        
+        // Find modal content for labeling
+        const modalTitle = modal.querySelector('h2, h3, .modal-title');
+        if (modalTitle && !modalTitle.id) {
+            modalTitle.id = `${modal.id}-title`;
+        }
+        if (modalTitle) {
+            modal.setAttribute('aria-labelledby', modalTitle.id);
+        }
+        
+        // Add close button functionality
+        const closeBtn = modal.querySelector('.close-modal');
+        if (closeBtn) {
+            closeBtn.setAttribute('aria-label', 'Fechar modal');
+            closeBtn.addEventListener('click', () => hideModal(modal.id));
+        }
+        
+        // Close on Escape key
+        modal.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') {
+                hideModal(modal.id);
+            }
+        });
+        
+        // Trap focus within modal
+        modal.addEventListener('keydown', trapFocus);
+    });
+}
+
+// Focus Management
+function trapFocus(e) {
+    if (e.key !== 'Tab') return;
+    
+    const modal = e.currentTarget;
+    const focusableElements = modal.querySelectorAll(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstFocusable = focusableElements[0];
+    const lastFocusable = focusableElements[focusableElements.length - 1];
+    
+    if (e.shiftKey) {
+        if (document.activeElement === firstFocusable) {
+            e.preventDefault();
+            lastFocusable.focus();
+        }
+    } else {
+        if (document.activeElement === lastFocusable) {
+            e.preventDefault();
+            firstFocusable.focus();
+        }
+    }
+}
+
+// Enhanced Modal Functions
+function showModalWithAccessibility(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    
+    // Store currently focused element
+    modal.dataset.previousFocus = document.activeElement;
+    
+    // Show modal
+    modal.style.display = 'flex';
+    modal.setAttribute('aria-hidden', 'false');
+    
+    // Add animation
+    modal.classList.add('animate-fadeIn');
+    modal.querySelector('.modal-content').classList.add('animate-slideInDown');
+    
+    // Focus first focusable element
+    setTimeout(() => {
+        const firstFocusable = modal.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (firstFocusable) {
+            firstFocusable.focus();
+        }
+    }, 100);
+    
+    // Prevent body scroll
+    document.body.style.overflow = 'hidden';
+}
+
+function hideModalWithAccessibility(modalId) {
+    const modal = document.getElementById(modalId);
+    if (!modal) return;
+    
+    // Hide modal
+    modal.style.display = 'none';
+    modal.setAttribute('aria-hidden', 'true');
+    
+    // Restore body scroll
+    document.body.style.overflow = '';
+    
+    // Return focus to previously focused element
+    const previousFocus = document.querySelector(modal.dataset.previousFocus);
+    if (previousFocus) {
+        previousFocus.focus();
+    }
+}
+
+// Progress Indicator for Loading States
+function showLoadingState(element, message = 'Carregando...') {
+    element.classList.add('loading');
+    element.setAttribute('aria-busy', 'true');
+    element.setAttribute('aria-label', message);
+    
+    // Disable interactive elements
+    const interactiveElements = element.querySelectorAll('button, input, select, textarea, a');
+    interactiveElements.forEach(el => {
+        el.disabled = true;
+        el.setAttribute('tabindex', '-1');
+    });
+}
+
+function hideLoadingState(element) {
+    element.classList.remove('loading');
+    element.removeAttribute('aria-busy');
+    element.removeAttribute('aria-label');
+    
+    // Re-enable interactive elements
+    const interactiveElements = element.querySelectorAll('button, input, select, textarea, a');
+    interactiveElements.forEach(el => {
+        el.disabled = false;
+        el.removeAttribute('tabindex');
+    });
+}
+
+// Enhanced Navigation
+function enhanceNavigation() {
+    // Add current page indicator
+    const currentPage = window.location.hash || '#home';
+    document.querySelectorAll('nav a[href^="#"]').forEach(link => {
+        if (link.getAttribute('href') === currentPage) {
+            link.setAttribute('aria-current', 'page');
+            link.classList.add('active');
+        }
+    });
+    
+    // Smooth scroll with accessibility announcements
+    document.querySelectorAll('a[href^="#"]').forEach(link => {
+        link.addEventListener('click', (e) => {
+            const targetId = link.getAttribute('href').substring(1);
+            const targetElement = document.getElementById(targetId);
+            
+            if (targetElement) {
+                e.preventDefault();
+                
+                // Smooth scroll
+                targetElement.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+                
+                // Update focus and announce
+                setTimeout(() => {
+                    targetElement.focus();
+                    const sectionTitle = targetElement.querySelector('h1, h2, h3, .section-title');
+                    if (sectionTitle) {
+                        announceToScreenReader(`Navegou para seção: ${sectionTitle.textContent}`);
+                    }
+                }, 500);
+            }
+        });
+    });
+}
+
+// Initialize all enhancements
+function initEnhancements() {
+    initAnimations();
+    setupFormValidation();
+    enhanceModalAccessibility();
+    enhanceNavigation();
+    
+    // Add animation classes to existing elements
+    setTimeout(() => {
+        document.querySelectorAll('.card').forEach((card, index) => {
+            card.style.animationDelay = `${index * 0.1}s`;
+            card.classList.add('animate-fadeInUp');
+        });
+        
+        document.querySelectorAll('.feature-item').forEach((item, index) => {
+            item.style.animationDelay = `${index * 0.15}s`;
+            item.classList.add('animate-fadeInRight');
+        });
+    }, 500);
+    
+    console.log('🎨 Animations and accessibility enhancements initialized');
+}
+
+// Call initialization when DOM is ready
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initEnhancements);
+} else {
+    initEnhancements();
+}

@@ -29,10 +29,31 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 require_once '../classes/OcorrenciaModel.php';
 
+// Função para enviar resposta JSON
+function sendJsonResponse($data, $message = '', $success = true, $statusCode = 200) {
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    
+    $response = [
+        'success' => $success,
+        'message' => $message,
+        'data' => $data
+    ];
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
+// Função para obter dados da requisição
+function getRequestData() {
+    $input = file_get_contents('php://input');
+    return $input ? json_decode($input, true) : [];
+}
+
 try {
     $ocorrenciaModel = new OcorrenciaModel();
     $method = $_SERVER['REQUEST_METHOD'];
-    $requestData = $ocorrenciaModel->getRequestData();
+    $requestData = getRequestData();
     
     switch ($method) {
         case 'GET':
@@ -45,6 +66,10 @@ try {
             
         case 'PUT':
             handlePutRequest($ocorrenciaModel, $requestData);
+            break;
+            
+        case 'DELETE':
+            handleDeleteRequest($ocorrenciaModel, $requestData);
             break;
             
         default:
@@ -72,14 +97,14 @@ function handleGetRequest($model, $data) {
             throw new Exception('Ocorrência não encontrada', 404);
         }
         
-        $model->jsonResponse($ocorrencia, 'Ocorrência encontrada');
+        sendJsonResponse($ocorrencia, 'Ocorrência encontrada');
         return;
     }
     
     // Se foi solicitado estatísticas
     if (isset($data['action']) && $data['action'] === 'stats') {
         $stats = $model->getStatistics();
-        $model->jsonResponse($stats, 'Estatísticas obtidas com sucesso');
+        sendJsonResponse($stats, 'Estatísticas obtidas com sucesso');
         return;
     }
     
@@ -96,7 +121,7 @@ function handleGetRequest($model, $data) {
     
     $ocorrencias = $model->list($filters);
     
-    $model->jsonResponse([
+    sendJsonResponse([
         'ocorrencias' => $ocorrencias,
         'total' => count($ocorrencias),
         'filtros_aplicados' => array_filter($filters)
@@ -133,7 +158,7 @@ function handlePostRequest($model, $data) {
     try {
         $ocorrencia = $model->create($data);
         
-        $model->jsonResponse($ocorrencia, 'Ocorrência registrada com sucesso', 201);
+        sendJsonResponse($ocorrencia, 'Ocorrência registrada com sucesso', true, 201);
         
     } catch (Exception $e) {
         throw $e;
@@ -141,30 +166,88 @@ function handlePostRequest($model, $data) {
 }
 
 /**
- * Manipular requisições PUT (atualizar status - apenas gestores)
+ * Manipular requisições PUT (atualizar ocorrência)
  */
 function handlePutRequest($model, $data) {
-    // Verificar se é uma atualização de status
-    if (!isset($data['action']) || $data['action'] !== 'update_status') {
-        throw new Exception('Ação não especificada', 400);
-    }
-    
     // Validar dados obrigatórios
-    if (!isset($data['id']) || !isset($data['status'])) {
-        throw new Exception('ID da ocorrência e novo status são obrigatórios', 400);
+    if (!isset($data['id'])) {
+        throw new Exception('ID da ocorrência é obrigatório', 400);
     }
     
     $id = (int) $data['id'];
-    $status = $data['status'];
-    $observacoes = $data['observacoes'] ?? '';
     
+    // Verificar se é apenas atualização de status (compatibilidade)
+    if (isset($data['action']) && $data['action'] === 'update_status') {
+        if (!isset($data['status'])) {
+            throw new Exception('Novo status é obrigatório', 400);
+        }
+        
+        $status = $data['status'];
+        $observacoes = $data['observacoes'] ?? '';
+        
+        try {
+            $result = $model->updateStatus($id, $status, $observacoes);
+            
+            if ($result) {
+                sendJsonResponse(null, 'Status da ocorrência atualizado com sucesso');
+            } else {
+                throw new Exception('Erro ao atualizar status da ocorrência', 500);
+            }
+        } catch (Exception $e) {
+            throw $e;
+        }
+        return;
+    }
+    
+    // Atualização completa da ocorrência
     try {
-        $result = $model->updateStatus($id, $status, $observacoes);
+        $dadosPermitidos = [
+            'tipo', 'endereco', 'descricao', 'status', 'prioridade', 
+            'observacoes', 'latitude', 'longitude'
+        ];
+        
+        $dadosAtualizacao = [];
+        foreach ($dadosPermitidos as $campo) {
+            if (isset($data[$campo])) {
+                $dadosAtualizacao[$campo] = $data[$campo];
+            }
+        }
+        
+        if (empty($dadosAtualizacao)) {
+            throw new Exception('Nenhum dado válido para atualização foi fornecido', 400);
+        }
+        
+        $result = $model->update($id, $dadosAtualizacao);
         
         if ($result) {
-            $model->jsonResponse(null, 'Status da ocorrência atualizado com sucesso');
+            sendJsonResponse(null, 'Ocorrência atualizada com sucesso');
         } else {
-            throw new Exception('Erro ao atualizar status da ocorrência', 500);
+            throw new Exception('Erro ao atualizar ocorrência', 500);
+        }
+        
+    } catch (Exception $e) {
+        throw $e;
+    }
+}
+
+/**
+ * Manipular requisições DELETE (excluir ocorrência)
+ */
+function handleDeleteRequest($model, $data) {
+    // Validar dados obrigatórios
+    if (!isset($data['id'])) {
+        throw new Exception('ID da ocorrência é obrigatório', 400);
+    }
+    
+    $id = (int) $data['id'];
+    
+    try {
+        $result = $model->delete($id);
+        
+        if ($result) {
+            sendJsonResponse(null, 'Ocorrência excluída com sucesso');
+        } else {
+            throw new Exception('Erro ao excluir ocorrência ou ocorrência não encontrada', 404);
         }
         
     } catch (Exception $e) {

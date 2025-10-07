@@ -29,6 +29,30 @@ if ($_SERVER['REQUEST_METHOD'] == 'OPTIONS') {
 
 require_once '../classes/OcorrenciaModel.php';
 
+// Função para obter dados da requisição
+function getRequestData() {
+    $input = file_get_contents('php://input');
+    $data = $input ? json_decode($input, true) : [];
+    
+    // Mesclar com parâmetros GET
+    return array_merge($_GET, $data ?: []);
+}
+
+// Função para enviar resposta JSON
+function sendJsonResponse($data, $message = '', $success = true, $statusCode = 200) {
+    http_response_code($statusCode);
+    header('Content-Type: application/json; charset=utf-8');
+    
+    $response = [
+        'success' => $success,
+        'message' => $message,
+        'data' => $data
+    ];
+    
+    echo json_encode($response, JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 try {
     $ocorrenciaModel = new OcorrenciaModel();
     $method = $_SERVER['REQUEST_METHOD'];
@@ -38,7 +62,7 @@ try {
         throw new Exception('Método não permitido', 405);
     }
     
-    $requestData = $ocorrenciaModel->getRequestData();
+    $requestData = getRequestData();
     
     // Obter código da ocorrência
     $codigo = null;
@@ -100,9 +124,9 @@ try {
         $dadosPublicos['data_atualizacao_formatada'] = $ocorrencia['data_atualizacao_formatada'];
     }
     
-    // Adicionar observações do gestor se existir e ocorrência não estiver pendente
-    if ($ocorrencia['observacoes_gestor'] && $ocorrencia['status'] !== 'pendente') {
-        $dadosPublicos['observacoes'] = $ocorrencia['observacoes_gestor'];
+    // Adicionar observações se existir e ocorrência não estiver pendente
+    if (isset($ocorrencia['observacoes']) && $ocorrencia['observacoes'] && $ocorrencia['status'] !== 'pendente') {
+        $dadosPublicos['observacoes'] = $ocorrencia['observacoes'];
     }
     
     // Gerar timeline de status
@@ -111,14 +135,8 @@ try {
     // Calcular tempo de processamento
     $dadosPublicos['tempo_processamento'] = calculateProcessingTime($ocorrencia);
     
-    // Log de rastreamento bem-sucedido
-    $ocorrenciaModel->logActivity('rastreamento_sucesso', [
-        'codigo' => $codigo,
-        'ip' => $_SERVER['REMOTE_ADDR'] ?? 'unknown'
-    ]);
-    
     // Retornar dados
-    $ocorrenciaModel->jsonResponse($dadosPublicos, 'Ocorrência encontrada');
+    sendJsonResponse($dadosPublicos, 'Ocorrência encontrada');
     
 } catch (Exception $e) {
     http_response_code($e->getCode() ?: 500);

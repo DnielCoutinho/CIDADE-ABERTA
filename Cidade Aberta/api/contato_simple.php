@@ -4,11 +4,11 @@
  * Cidade Aberta Santarém
  */
 
-require_once '../database/Connection.php';
+require_once __DIR__ . '/../config/database.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, OPTIONS');
+header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
 // Tratar OPTIONS request
@@ -16,80 +16,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+function sendResponse($data, $message = '', $success = true) {
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data' => $data
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 try {
-    $db = Database::getInstance()->getConnection();
+    $db = DatabaseConfig::getConnection();
     
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Receber dados do formulário
-        $input = json_decode(file_get_contents('php://input'), true);
-        
-        // Se não vier JSON, tentar POST normal
-        if (!$input) {
-            $input = $_POST;
-        }
-        
-        // Log para debug
-        error_log("Dados de contato recebidos: " . print_r($input, true));
-        
-        // Validar dados obrigatórios
-        $requiredFields = ['nome', 'email', 'assunto', 'mensagem'];
-        foreach ($requiredFields as $field) {
-            if (empty($input[$field])) {
-                throw new Exception("Campo obrigatório: {$field}");
-            }
-        }
-        
-        // Validar email
-        if (!filter_var($input['email'], FILTER_VALIDATE_EMAIL)) {
-            throw new Exception("Email inválido");
-        }
-        
-        // Criar tabela se não existir
-        $createTable = "
-            CREATE TABLE IF NOT EXISTS contatos (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                nome VARCHAR(100) NOT NULL,
-                email VARCHAR(100) NOT NULL,
-                telefone VARCHAR(20),
-                assunto VARCHAR(200) NOT NULL,
-                mensagem TEXT NOT NULL,
-                data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                status ENUM('novo', 'lido', 'respondido') DEFAULT 'novo'
-            )
-        ";
-        $db->exec($createTable);
-        
-        // Inserir no banco
-        $sql = "INSERT INTO contatos (nome, email, telefone, assunto, mensagem, data_criacao) 
-                VALUES (?, ?, ?, ?, ?, NOW())";
-        
-        $stmt = $db->prepare($sql);
-        $result = $stmt->execute([
-            $input['nome'],
-            $input['email'],
-            $input['telefone'] ?? null,
-            $input['assunto'],
-            $input['mensagem']
-        ]);
-        
-        if ($result) {
-            echo json_encode([
-                'success' => true,
-                'message' => 'Mensagem enviada com sucesso! Retornaremos em breve.'
-            ]);
-        } else {
-            throw new Exception('Erro ao salvar mensagem');
-        }
-        
-    } else {
-        throw new Exception('Método não permitido');
+    // Apenas POST é permitido para enviar contatos
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        throw new Exception('Apenas método POST é permitido');
     }
     
+    // Obter dados do POST
+    $input = json_decode(file_get_contents('php://input'), true);
+    
+    // Validação dos campos obrigatórios
+    $nome = trim($input['nome'] ?? '');
+    $email = trim($input['email'] ?? '');
+    $assunto = trim($input['assunto'] ?? '');
+    $mensagem = trim($input['mensagem'] ?? '');
+    $telefone = trim($input['telefone'] ?? '');
+    
+    if (empty($nome)) {
+        throw new Exception('Nome é obrigatório');
+    }
+    
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        throw new Exception('Email válido é obrigatório');
+    }
+    
+    if (empty($assunto)) {
+        throw new Exception('Assunto é obrigatório');
+    }
+    
+    if (empty($mensagem)) {
+        throw new Exception('Mensagem é obrigatória');
+    }
+    
+    // Inserir contato no banco
+    $sql = "INSERT INTO contatos (nome, email, telefone, assunto, mensagem, data_criacao, status) 
+            VALUES (?, ?, ?, ?, ?, NOW(), 'novo')";
+    
+    $stmt = $db->prepare($sql);
+    $stmt->execute([$nome, $email, $telefone ?: null, $assunto, $mensagem]);
+    
+    $contactId = $db->lastInsertId();
+    
+    sendResponse([
+        'id' => $contactId,
+        'protocolo' => 'CNT' . str_pad($contactId, 6, '0', STR_PAD_LEFT)
+    ], 'Contato enviado com sucesso! Entraremos em contato em breve.');
+    
 } catch (Exception $e) {
-    http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
+    http_response_code(400);
+    sendResponse(null, $e->getMessage(), false);
 }
 ?>

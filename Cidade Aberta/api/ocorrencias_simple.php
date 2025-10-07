@@ -1,12 +1,13 @@
 <?php
 /**
- * API Simples para Ocorrências
+ * API Simples para Ocorrências Públicas
  * Cidade Aberta Santarém
+ * Retorna apenas informações básicas das ocorrências para exibição pública
  */
 
-require_once '../database/Connection.php';
+require_once __DIR__ . '/../config/database.php';
 
-header('Content-Type: application/json');
+header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
@@ -16,77 +17,93 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+function sendResponse($data, $message = '', $success = true) {
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data' => $data
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 try {
-    $db = Database::getInstance()->getConnection();
+    $db = DatabaseConfig::getConnection();
     
-    if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-        // Receber dados do formulário
-        $input = json_decode(file_get_contents('php://input'), true);
-        
-        // Log para debug
-        error_log("Dados recebidos: " . print_r($input, true));
-        
-        // Validar dados obrigatórios
-        $requiredFields = ['tipo', 'endereco', 'descricao'];
-        foreach ($requiredFields as $field) {
-            if (empty($input[$field])) {
-                throw new Exception("Campo obrigatório: {$field}");
-            }
-        }
-        
-        // Gerar código único
-        $stmt = $db->query("SELECT COUNT(*) as total FROM ocorrencias");
-        $count = $stmt->fetch()['total'];
-        $codigo = 'STM' . str_pad($count + 1, 6, '0', STR_PAD_LEFT);
-        
-        // Inserir no banco
-        $sql = "INSERT INTO ocorrencias (codigo, tipo, endereco, descricao, status, data_criacao, latitude, longitude) 
-                VALUES (?, ?, ?, ?, 'pendente', NOW(), ?, ?)";
-        
-        $stmt = $db->prepare($sql);
-        $result = $stmt->execute([
-            $codigo,
-            $input['tipo'],
-            $input['endereco'],
-            $input['descricao'],
-            $input['latitude'] ?? null,
-            $input['longitude'] ?? null
-        ]);
-        
-        if ($result) {
-            echo json_encode([
-                'success' => true,
-                'message' => 'Ocorrência registrada com sucesso!',
-                'data' => [
-                    'codigo' => $codigo,
-                    'status' => 'pendente'
-                ]
-            ]);
-        } else {
-            throw new Exception('Erro ao salvar no banco de dados');
-        }
-        
-    } elseif ($_SERVER['REQUEST_METHOD'] === 'GET') {
-        // Listar ocorrências
-        $sql = "SELECT codigo, tipo, endereco, descricao, status, data_criacao, latitude, longitude 
-                FROM ocorrencias 
-                ORDER BY data_criacao DESC 
-                LIMIT 50";
-        
-        $stmt = $db->query($sql);
-        $ocorrencias = $stmt->fetchAll();
-        
-        echo json_encode([
-            'success' => true,
-            'data' => $ocorrencias
-        ]);
+    // Apenas GET é permitido para dados públicos
+    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+        throw new Exception('Apenas método GET é permitido');
     }
+    
+    // Parâmetros de filtro
+    $limite = isset($_GET['limite']) ? (int)$_GET['limite'] : 20;
+    $limite = min($limite, 50); // Máximo 50 ocorrências
+    
+    $tipo = $_GET['tipo'] ?? null;
+    $status = $_GET['status'] ?? null;
+    
+    // Query base - apenas informações públicas
+    $sql = "SELECT 
+                id,
+                codigo,
+                tipo,
+                endereco,
+                descricao,
+                status,
+                prioridade,
+                latitude,
+                longitude,
+                data_criacao,
+                data_atualizacao,
+                DATE_FORMAT(data_criacao, '%d/%m/%Y %H:%i') as data_criacao_formatada,
+                DATE_FORMAT(data_atualizacao, '%d/%m/%Y %H:%i') as data_atualizacao_formatada
+            FROM ocorrencias 
+            WHERE 1=1";
+    
+    $params = [];
+    
+    // Filtros opcionais
+    if ($tipo) {
+        $sql .= " AND tipo = ?";
+        $params[] = $tipo;
+    }
+    
+    if ($status) {
+        $sql .= " AND status = ?";
+        $params[] = $status;
+    }
+    
+    $sql .= " ORDER BY data_criacao DESC LIMIT ?";
+    $params[] = $limite;
+    
+    $stmt = $db->prepare($sql);
+    $stmt->execute($params);
+    $ocorrencias = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Estatísticas básicas
+    $statsSQL = "SELECT 
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN status = 'pendente' THEN 1 END) as pendentes,
+                    COUNT(CASE WHEN status = 'em_andamento' THEN 1 END) as em_andamento,
+                    COUNT(CASE WHEN status = 'concluida' THEN 1 END) as concluidas,
+                    COUNT(CASE WHEN status = 'cancelada' THEN 1 END) as canceladas
+                FROM ocorrencias";
+    
+    $statsStmt = $db->prepare($statsSQL);
+    $statsStmt->execute();
+    $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
+    
+    sendResponse([
+        'ocorrencias' => $ocorrencias,
+        'estatisticas' => $stats,
+        'parametros' => [
+            'limite' => $limite,
+            'tipo' => $tipo,
+            'status' => $status
+        ]
+    ], 'Ocorrências carregadas com sucesso');
     
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => $e->getMessage()
-    ]);
+    sendResponse(null, $e->getMessage(), false);
 }
 ?>

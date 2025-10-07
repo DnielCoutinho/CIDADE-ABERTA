@@ -1,109 +1,119 @@
 <?php
 /**
- * API para estatísticas das ocorrências - Cidade Aberta Santarém
- * Versão limpa e otimizada
+ * API de Estatísticas Públicas
+ * Cidade Aberta Santarém
  */
 
-header('Content-Type: application/json');
+require_once __DIR__ . '/../config/database.php';
+
+header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: GET');
+header('Access-Control-Allow-Methods: GET, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
+// Tratar OPTIONS request
+if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+    exit(0);
+}
+
+function sendResponse($data, $message = '', $success = true) {
+    echo json_encode([
+        'success' => $success,
+        'message' => $message,
+        'data' => $data
+    ], JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 try {
-    // Conexão direta com o banco de dados
-    $pdo = new PDO("mysql:host=localhost;dbname=cidade_aberta;charset=utf8mb4", "root", "");
-    $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+    $db = DatabaseConfig::getConnection();
     
-    // Buscar total de ocorrências
-    $stmt = $pdo->query("SELECT COUNT(*) as total FROM ocorrencias");
-    $total = $stmt->fetch()['total'];
+    // Apenas GET é permitido
+    if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
+        throw new Exception('Apenas método GET é permitido');
+    }
     
-    // Buscar ocorrências por status
-    $stmt = $pdo->query("
-        SELECT 
-            COUNT(CASE WHEN status = 'concluida' THEN 1 END) as concluidas,
-            COUNT(CASE WHEN status = 'pendente' THEN 1 END) as pendentes,
-            COUNT(CASE WHEN status = 'em_andamento' THEN 1 END) as em_andamento
-        FROM ocorrencias
-    ");
-    $counts = $stmt->fetch();
+    // Estatísticas gerais
+    $statsSQL = "SELECT 
+                    COUNT(*) as total_ocorrencias,
+                    COUNT(CASE WHEN status = 'pendente' THEN 1 END) as pendentes,
+                    COUNT(CASE WHEN status = 'em_andamento' THEN 1 END) as em_andamento,
+                    COUNT(CASE WHEN status = 'concluida' THEN 1 END) as concluidas,
+                    COUNT(CASE WHEN status = 'cancelada' THEN 1 END) as canceladas,
+                    COUNT(CASE WHEN data_criacao >= DATE_SUB(NOW(), INTERVAL 30 DAY) THEN 1 END) as ultimos_30_dias,
+                    COUNT(CASE WHEN data_criacao >= DATE_SUB(NOW(), INTERVAL 7 DAY) THEN 1 END) as ultima_semana
+                FROM ocorrencias";
     
-    // Calcular satisfação (% de ocorrências resolvidas)
-    $resolvidas = $counts['concluidas'];
-    $satisfacao = $total > 0 ? round(($resolvidas / $total) * 100) : 0;
-    
-    // Calcular tempo médio de resolução em horas
-    $stmt = $pdo->query("
-        SELECT AVG(TIMESTAMPDIFF(HOUR, data_criacao, data_atualizacao)) as media_horas
-        FROM ocorrencias 
-        WHERE status = 'concluida' 
-        AND data_atualizacao IS NOT NULL
-        AND data_atualizacao > data_criacao
-    ");
-    $tempo = $stmt->fetch();
-    $horas_medias = $tempo['media_horas'] ? round($tempo['media_horas']) : 24;
+    $stmt = $db->prepare($statsSQL);
+    $stmt->execute();
+    $stats = $stmt->fetch(PDO::FETCH_ASSOC);
     
     // Estatísticas por tipo
-    $stmt = $pdo->query("
-        SELECT 
-            tipo,
-            COUNT(*) as total,
-            COUNT(CASE WHEN status = 'concluida' THEN 1 END) as resolvidas
-        FROM ocorrencias 
-        GROUP BY tipo
-        ORDER BY total DESC
-    ");
+    $tiposSQL = "SELECT 
+                    tipo,
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN status = 'concluida' THEN 1 END) as resolvidas,
+                    ROUND((COUNT(CASE WHEN status = 'concluida' THEN 1 END) * 100.0 / COUNT(*)), 1) as taxa_resolucao
+                FROM ocorrencias 
+                GROUP BY tipo 
+                ORDER BY total DESC";
     
-    $por_tipo = [];
-    while ($row = $stmt->fetch()) {
-        $por_tipo[] = [
-            'tipo' => $row['tipo'],
-            'total' => (int)$row['total'],
-            'resolvidas' => (int)$row['resolvidas'],
-            'percentual' => $row['total'] > 0 ? round(($row['resolvidas'] / $row['total']) * 100) : 0
-        ];
-    }
+    $stmt = $db->prepare($tiposSQL);
+    $stmt->execute();
+    $porTipo = $stmt->fetchAll(PDO::FETCH_ASSOC);
     
-    // Últimas ocorrências
-    $stmt = $pdo->query("
-        SELECT codigo, tipo, endereco, status, data_criacao
-        FROM ocorrencias 
-        ORDER BY data_criacao DESC 
-        LIMIT 5
-    ");
+    // Tempo médio de resolução
+    $tempoSQL = "SELECT 
+                    AVG(TIMESTAMPDIFF(HOUR, data_criacao, data_atualizacao)) as media_horas
+                FROM ocorrencias 
+                WHERE status = 'concluida' AND data_atualizacao IS NOT NULL";
     
-    $ultimas = [];
-    while ($row = $stmt->fetch()) {
-        $ultimas[] = [
-            'codigo' => $row['codigo'],
-            'tipo' => $row['tipo'],
-            'endereco' => $row['endereco'],
-            'status' => $row['status'],
-            'data' => date('d/m/Y H:i', strtotime($row['data_criacao']))
-        ];
-    }
+    $stmt = $db->prepare($tempoSQL);
+    $stmt->execute();
+    $tempo = $stmt->fetch(PDO::FETCH_ASSOC);
     
-    // Resposta final
-    echo json_encode([
-        'success' => true,
-        'data' => [
-            'ocorrencias_resolvidas' => $resolvidas,
-            'satisfacao' => $satisfacao,
-            'horas_medias' => $horas_medias,
-            'total_ocorrencias' => $total,
-            'pendentes' => $counts['pendentes'],
-            'em_andamento' => $counts['em_andamento'],
-            'concluidas' => $counts['concluidas'],
-            'por_tipo' => $por_tipo,
-            'ultimas_ocorrencias' => $ultimas
-        ]
-    ], JSON_UNESCAPED_UNICODE);
+    // Estatísticas mensais (últimos 6 meses)
+    $mensalSQL = "SELECT 
+                    DATE_FORMAT(data_criacao, '%Y-%m') as mes,
+                    DATE_FORMAT(data_criacao, '%m/%Y') as mes_formatado,
+                    COUNT(*) as total,
+                    COUNT(CASE WHEN status = 'concluida' THEN 1 END) as resolvidas
+                FROM ocorrencias 
+                WHERE data_criacao >= DATE_SUB(NOW(), INTERVAL 6 MONTH)
+                GROUP BY DATE_FORMAT(data_criacao, '%Y-%m')
+                ORDER BY mes DESC
+                LIMIT 6";
+    
+    $stmt = $db->prepare($mensalSQL);
+    $stmt->execute();
+    $mensal = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    
+    // Calcular taxa de satisfação (simulada baseada em resoluções)
+    $taxa_satisfacao = $stats['total_ocorrencias'] > 0 
+        ? round(($stats['concluidas'] * 100) / $stats['total_ocorrencias'], 1)
+        : 0;
+    
+    $resultado = [
+        'resumo' => [
+            'total_ocorrencias' => (int)$stats['total_ocorrencias'],
+            'pendentes' => (int)$stats['pendentes'],
+            'em_andamento' => (int)$stats['em_andamento'],
+            'concluidas' => (int)$stats['concluidas'],
+            'canceladas' => (int)$stats['canceladas'],
+            'ultimos_30_dias' => (int)$stats['ultimos_30_dias'],
+            'ultima_semana' => (int)$stats['ultima_semana'],
+            'taxa_satisfacao' => $taxa_satisfacao,
+            'tempo_medio_resolucao' => $tempo['media_horas'] ? round($tempo['media_horas'], 1) : 0
+        ],
+        'por_tipo' => $porTipo,
+        'historico_mensal' => array_reverse($mensal),
+        'atualizado_em' => date('Y-m-d H:i:s')
+    ];
+    
+    sendResponse($resultado, 'Estatísticas obtidas com sucesso');
     
 } catch (Exception $e) {
     http_response_code(500);
-    echo json_encode([
-        'success' => false,
-        'message' => 'Erro ao obter estatísticas: ' . $e->getMessage()
-    ], JSON_UNESCAPED_UNICODE);
+    sendResponse(null, $e->getMessage(), false);
 }
 ?>

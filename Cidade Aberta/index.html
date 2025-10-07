@@ -27,366 +27,718 @@
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
+    <!-- Skip Links para Navegação por Teclado -->
+    <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
+    <a href="#nav-menu" class="skip-link">Pular para a navegação</a>
+    
     <!-- Header -->
-    <header class="header" id="header">
-        <nav class="navbar">
+    <header class="header" id="header" role="banner">
+        <nav class="navbar" role="navigation" aria-label="Menu principal">
             <div class="nav-container">
                 <div class="nav-logo">
-                    <img src="assets/logo-santarem.png" alt="Logo Santarém" class="logo-img">
+                    <img src="assets/logo-santarem.png" alt="Logo da Prefeitura de Santarém" class="logo-img">
                     <div class="logo-text">
-                        <h2>Cidade Aberta</h2>
-                        <p>Santarém - PA</p>
+                        <span class="logo-title">Cidade Aberta</span>
+                        <span class="logo-subtitle">Santarém - PA</span>
                     </div>
                 </div>
                 
-                <ul class="nav-menu" id="nav-menu">
-                    <li class="nav-item">
-                        <a href="#home" class="nav-link">Início</a>
+                <ul class="nav-menu" id="nav-menu" role="menubar">
+                    <li class="nav-item" role="none">
+                        <a href="#home" class="nav-link" role="menuitem" aria-label="Ir para início">Início</a>
                     </li>
-                    <li class="nav-item">
-                        <a href="#mapa" class="nav-link">Mapa</a>
+                    <li class="nav-item" role="none">
+                        <a href="#mapa" class="nav-link" role="menuitem" aria-label="Ver mapa de ocorrências">Mapa</a>
                     </li>
-                    <li class="nav-item">
-                        <a href="#contato" class="nav-link">Contato</a>
+                    <li class="nav-item" role="none">
+                        <a href="#contato" class="nav-link" role="menuitem" aria-label="Entrar em contato">Contato</a>
                     </li>
-                    <li class="nav-item">
-                        <a href="#login" class="nav-link nav-login">Área do Gestor</a>
+                    <li class="nav-item" role="none">
+                        <a href="#rastreamento" class="nav-link" role="menuitem" aria-label="Acompanhar ocorrência">Acompanhar</a>
                     </li>
                 </ul>
                 
-                <div class="nav-toggle" id="nav-toggle">
-                    <span class="bar"></span>
-                    <span class="bar"></span>
-                    <span class="bar"></span>
+                <div class="nav-actions">
+                    <button type="button" class="btn-nav btn-login" onclick="showModal('login-modal')" aria-label="Abrir formulário de login">
+                        <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                        <span>Entrar</span>
+                    </button>
                 </div>
+                
+                <button class="nav-toggle" id="nav-toggle" aria-label="Abrir menu de navegação" aria-expanded="false" aria-controls="nav-menu">
+                    <span class="bar" aria-hidden="true"></span>
+                    <span class="bar" aria-hidden="true"></span>
+                    <span class="bar" aria-hidden="true"></span>
+                </button>
             </div>
         </nav>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero" id="home">
-        <div class="hero-background">
-            <div class="hero-overlay"></div>
-        </div>
-        <div class="container">
-            <div class="hero-content">
-                <h1 class="hero-title">
-                    Transparência e <span class="highlight">Eficiência</span> 
-                    para Santarém
-                </h1>
-                <p class="hero-description">
-                    Plataforma digital para registrar ocorrências urbanas, acompanhar soluções 
-                    e promover a transparência na gestão pública de Santarém-PA.
-                </p>
-                <div class="hero-buttons">
-                    <a href="#mapa" class="btn btn-primary">
-                        <i class="fas fa-map-marked-alt"></i>
-                        Ver Ocorrências
-                    </a>
-                    <a href="#registro" class="btn btn-secondary">
-                        <i class="fas fa-plus-circle"></i>
-                        Registrar Problema
-                    </a>
-                </div>
-                
-                <div class="hero-stats">
-                    <div class="stat-item">
-                        <span class="stat-number" id="ocorrencias-resolvidas" data-target="1247">0</span>
-                        <span class="stat-label">Ocorrências Resolvidas</span>
+    <!-- Conteúdo Principal -->
+    <main id="main-content" role="main">
+        <!-- Hero Section -->
+        <section class="hero" id="home" role="banner" aria-labelledby="hero-title">
+            <div class="hero-background" aria-hidden="true">
+                <div class="hero-overlay"></div>
+            </div>
+            <div class="container">
+                <div class="hero-content">
+                    <h1 class="hero-title" id="hero-title">
+                        Transparência e <span class="highlight">Eficiência</span> 
+                        para Santarém
+                    </h1>
+                    <p class="hero-description">
+                        Plataforma digital para registrar ocorrências urbanas, acompanhar soluções 
+                        e promover a transparência na gestão pública de Santarém-PA.
+                    </p>
+                    <div class="hero-buttons">
+                        <a href="#mapa" class="btn btn-primary" aria-label="Ver mapa com todas as ocorrências registradas">
+                            <i class="fas fa-map-marked-alt" aria-hidden="true"></i>
+                            Ver Ocorrências
+                        </a>
+                        <a href="#registro" class="btn btn-secondary" aria-label="Registrar um novo problema urbano">
+                            <i class="fas fa-plus-circle" aria-hidden="true"></i>
+                            Registrar Problema
+                        </a>
                     </div>
-                    <div class="stat-item">
-                        <span class="stat-number" id="satisfacao" data-target="89">0</span>
-                        <span class="stat-label">% Satisfação</span>
-                    </div>
-                    <div class="stat-item">
-                        <span class="stat-number" id="horas-medias" data-target="48">0</span>
-                        <span class="stat-label">Horas Médias</span>
+                    
+                    <div class="hero-stats" role="region" aria-label="Estatísticas do sistema">
+                        <div class="stat-item">
+                            <span class="stat-number" id="ocorrencias-resolvidas" data-target="1247" aria-label="Número de ocorrências resolvidas">0</span>
+                            <span class="stat-label">Ocorrências Resolvidas</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="satisfacao" data-target="89" aria-label="Percentual de satisfação">0</span>
+                            <span class="stat-label">% Satisfação</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-number" id="horas-medias" data-target="48" aria-label="Tempo médio de resolução em horas">0</span>
+                            <span class="stat-label">Horas Médias</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <!-- Mapa Section -->
-    <section class="mapa-section" id="mapa">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Mapa de Ocorrências</h2>
-                <p class="section-description">
-                    Visualize todas as ocorrências registradas em Santarém e acompanhe o status de cada uma
-                </p>
-            </div>
-            
-            <div class="mapa-controls">
-                <div class="filter-controls">
-                    <button class="filter-btn active" data-filter="all">
-                        <i class="fas fa-globe"></i>
-                        Todas
-                    </button>
-                    <button class="filter-btn" data-filter="pendente">
-                        <i class="fas fa-clock"></i>
-                        Pendentes
-                    </button>
-                    <button class="filter-btn" data-filter="em_andamento">
-                        <i class="fas fa-tools"></i>
-                        Em Andamento
-                    </button>
-                    <button class="filter-btn" data-filter="concluida">
-                        <i class="fas fa-check-circle"></i>
-                        Concluídas
-                    </button>
-                </div>
+        <!-- Mapa Section -->
+        <section class="mapa-section" id="mapa" aria-labelledby="mapa-title">
+            <div class="container">
+                <header class="section-header">
+                    <h2 class="section-title" id="mapa-title">Mapa de Ocorrências</h2>
+                    <p class="section-description">
+                        Visualize todas as ocorrências registradas em Santarém e acompanhe o status de cada uma
+                    </p>
+                </header>
                 
-                <div class="search-control">
-                    <input type="text" placeholder="Buscar por bairro..." class="search-input" id="search-input">
-                    <button class="search-btn">
-                        <i class="fas fa-search"></i>
-                    </button>
-                </div>
-            </div>
-            
-            <div class="mapa-container">
-                <div class="mapa-interactive">
-                    <div id="leaflet-map"></div>
-                    <div class="mapa-placeholder">
-                        <i class="fas fa-map-marked-alt"></i>
-                        <p>Carregando mapa interativo...</p>
-                    </div>
-                </div>
-                
-                <div class="mapa-legend">
-                    <h4>Legenda</h4>
-                    <div class="legend-item">
-                        <span class="legend-color pendente"></span>
-                        <span>Pendente</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-color andamento"></span>
-                        <span>Em Andamento</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-color concluido"></span>
-                        <span>Concluído</span>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Formulário de Registro -->
-            <div class="registro-form" id="registro">
-                <h3>Registrar Nova Ocorrência</h3>
-                <form id="form-ocorrencia" class="form-ocorrencia">
-                    <div class="form-group">
-                        <label for="tipo-ocorrencia">Tipo de Ocorrência</label>
-                        <select id="tipo-ocorrencia" name="tipo" required>
-                            <option value="">Selecione o tipo</option>
-                            <option value="buraco">Buraco na rua</option>
-                            <option value="lixo">Acúmulo de lixo</option>
-                            <option value="iluminacao">Falta de iluminação</option>
-                            <option value="agua">Problema de água</option>
-                            <option value="outros">Outros</option>
-                        </select>
+                <div class="mapa-controls" role="toolbar" aria-label="Filtros do mapa">
+                    <div class="filter-controls">
+                        <button class="filter-btn active" data-filter="all" aria-pressed="true" aria-label="Mostrar todas as ocorrências">
+                            <i class="fas fa-globe" aria-hidden="true"></i>
+                            Todas
+                        </button>
+                        <button class="filter-btn" data-filter="pendente" aria-pressed="false" aria-label="Mostrar apenas ocorrências pendentes">
+                            <i class="fas fa-clock" aria-hidden="true"></i>
+                            Pendentes
+                        </button>
+                        <button class="filter-btn" data-filter="em_andamento" aria-pressed="false" aria-label="Mostrar apenas ocorrências em andamento">
+                            <i class="fas fa-tools" aria-hidden="true"></i>
+                            Em Andamento
+                        </button>
+                        <button class="filter-btn" data-filter="concluida" aria-pressed="false" aria-label="Mostrar apenas ocorrências concluídas">
+                            <i class="fas fa-check-circle" aria-hidden="true"></i>
+                            Concluídas
                     </div>
                     
-                    <div class="form-group">
-                        <label for="descricao">Descrição do Problema</label>
-                        <textarea id="descricao" name="descricao" placeholder="Descreva detalhadamente o problema..." required></textarea>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="endereco">Endereço/Localização</label>
-                        <input type="text" id="endereco" name="endereco" placeholder="Digite o endereço ou clique no mapa" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="foto">Foto (opcional)</label>
-                        <input type="file" id="foto" name="foto" accept="image/*">
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="nome">Seu Nome</label>
-                        <input type="text" id="nome" name="nome" placeholder="Digite seu nome" required>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="email">Seu E-mail</label>
-                        <input type="email" id="email" name="email" placeholder="Digite seu e-mail para acompanhar">
-                    </div>
-                    
-                    <button type="submit" class="btn btn-primary btn-submit">
-                        <i class="fas fa-paper-plane"></i>
-                        Enviar Ocorrência
-                    </button>
-                </form>
-            </div>
-        </div>
-    </section>
-
-    <!-- Rastreamento Section -->
-    <section class="rastreamento-section" id="rastreamento">
-        <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Acompanhe sua Ocorrência</h2>
-                <p class="section-description">
-                    Digite o ID da sua ocorrência para ver o status atual
-                </p>
-            </div>
-            
-            <div class="rastreamento-form">
-                <form id="form-rastreamento" class="form-tracking">
-                    <div class="tracking-input-group">
-                        <input type="text" id="id-ocorrencia" placeholder="Digite o ID da ocorrência" required>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-search"></i>
-                            Rastrear
+                    <div class="search-control">
+                        <label for="search-input" class="sr-only">Buscar ocorrências por bairro</label>
+                        <input type="text" 
+                               placeholder="Buscar por bairro..." 
+                               class="search-input" 
+                               id="search-input"
+                               aria-label="Digite o nome do bairro para buscar">
+                        <button class="search-btn" type="button" aria-label="Executar busca">
+                            <i class="fas fa-search" aria-hidden="true"></i>
                         </button>
                     </div>
-                </form>
+                </div>
                 
-                <div id="resultado-rastreamento" class="resultado-tracking" style="display: none;">
-                    <!-- Resultado do rastreamento será exibido aqui -->
+                <div class="mapa-container">
+                    <div class="mapa-interactive">
+                        <div id="leaflet-map" role="application" aria-label="Mapa interativo de ocorrências em Santarém"></div>
+                        <div class="mapa-placeholder" aria-live="polite">
+                            <i class="fas fa-map-marked-alt" aria-hidden="true"></i>
+                            <p>Carregando mapa interativo...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mapa-legend" role="img" aria-labelledby="legend-title">
+                        <h3 id="legend-title">Legenda</h3>
+                        <div class="legend-item">
+                            <span class="legend-color pendente" aria-hidden="true"></span>
+                            <span>Pendente</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color andamento" aria-hidden="true"></span>
+                            <span>Em Andamento</span>
+                        </div>
+                        <div class="legend-item">
+                            <span class="legend-color concluido" aria-hidden="true"></span>
+                            <span>Concluído</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Formulário de Registro -->
+                <div class="registro-form" id="registro" role="form" aria-labelledby="registro-title">
+                    <h3 id="registro-title">Registrar Nova Ocorrência</h3>
+                    <form id="form-ocorrencia" class="form-ocorrencia" novalidate>
+                        <div class="form-group">
+                            <label for="tipo-ocorrencia">Tipo de Ocorrência *</label>
+                            <select id="tipo-ocorrencia" 
+                                    name="tipo" 
+                                    required 
+                                    aria-describedby="tipo-help"
+                                    aria-invalid="false">
+                                <option value="">Selecione o tipo</option>
+                                <option value="buraco">Buraco na rua</option>
+                                <option value="lixo">Acúmulo de lixo</option>
+                                <option value="iluminacao">Falta de iluminação</option>
+                                <option value="agua">Problema de água</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="descricao">Descrição do Problema *</label>
+                            <textarea id="descricao" 
+                                      name="descricao" 
+                                      placeholder="Descreva detalhadamente o problema..." 
+                                      required
+                                      aria-describedby="descricao-help"
+                                      aria-invalid="false"
+                                      rows="4"></textarea>
+                            <small id="descricao-help" class="form-help">Seja específico para ajudar na resolução</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="endereco">Endereço/Localização *</label>
+                            <input type="text" 
+                                   id="endereco" 
+                                   name="endereco" 
+                                   placeholder="Digite o endereço ou clique no mapa" 
+                                   required
+                                   aria-describedby="endereco-help"
+                                   aria-invalid="false">
+                            <small id="endereco-help" class="form-help">Informe o local exato do problema</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="foto">Foto (opcional)</label>
+                            <input type="file" 
+                                   id="foto" 
+                                   name="foto" 
+                                   accept="image/*"
+                                   aria-describedby="foto-help">
+                            <small id="foto-help" class="form-help">Adicione uma foto para ajudar na identificação</small>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="nome">Seu Nome *</label>
+                            <input type="text" 
+                                   id="nome" 
+                                   name="nome" 
+                                   placeholder="Digite seu nome" 
+                                   required
+                                   aria-invalid="false">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="email">Seu E-mail</label>
+                            <input type="email" 
+                                   id="email" 
+                                   name="email" 
+                                   placeholder="Digite seu e-mail para acompanhar"
+                                   aria-describedby="email-help"
+                                   aria-invalid="false">
+                            <small id="email-help" class="form-help">Opcional: receba atualizações sobre sua ocorrência</small>
+                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-submit" aria-describedby="submit-help">
+                            <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                            <span>Enviar Ocorrência</span>
+                            <span class="loading-text" style="display: none;">Enviando...</span>
+                        </button>
+                        <small id="submit-help" class="form-help">Todos os campos marcados com * são obrigatórios</small>
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        <!-- Rastreamento Section -->
+        <section class="rastreamento-section" id="rastreamento" aria-labelledby="rastreamento-title">
+            <div class="container">
+                <header class="section-header">
+                    <h2 class="section-title" id="rastreamento-title">
+                    <i class="fas fa-search" aria-hidden="true"></i>
+                    Consulta Pública de Ocorrências
+                </h2>
+                <p class="section-description">
+                    Transparência total! Qualquer pessoa pode consultar o status das ocorrências usando o código público
+                </p>
+                <div class="public-notice" role="note">
+                    <i class="fas fa-globe" aria-hidden="true"></i>
+                    <span>Consulta aberta para todos os cidadãos - Sem necessidade de login</span>
+                </div>
+            </header>
+            
+            <div class="rastreamento-form">
+                <!-- Formulário Principal de Consulta -->
+                <div class="consulta-publica">
+                    <div class="consulta-card" role="form" aria-labelledby="consulta-title">
+                        <h3 id="consulta-title">
+                            <i class="fas fa-eye" aria-hidden="true"></i> 
+                            Consulta Pública
+                        </h3>
+                        <p>Digite qualquer código de ocorrência para ver seu status e andamento</p>
+                        
+                        <form id="form-rastreamento" class="form-tracking" novalidate>
+                            <div class="tracking-input-group">
+                                <label for="id-ocorrencia" class="sr-only">Código da ocorrência</label>
+                                <input type="text" 
+                                       id="id-ocorrencia" 
+                                       name="codigo"
+                                       placeholder="Digite o código (ex: STM000001)" 
+                                       required 
+                                       maxlength="9"
+                                       aria-describedby="codigo-help"
+                                       aria-invalid="false"
+                                       pattern="STM[0-9]{6}">
+                                <button type="submit" class="btn btn-primary" aria-describedby="codigo-help">
+                                    <i class="fas fa-search" aria-hidden="true"></i>
+                                    <span>Consultar</span>
+                                </button>
+                            </div>
+                            <small id="codigo-help" class="form-help">Formato: STM seguido de 6 números</small>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Área do Cidadão -->
+                <div class="acesso-cidadao">
+                    <div class="cidadao-card" role="complementary" aria-labelledby="cidadao-title">
+                        <h4 id="cidadao-title">
+                            <i class="fas fa-user-lock" aria-hidden="true"></i> 
+                            Área Privada do Cidadão
+                        </h4>
+                        <p>Faça login para ver apenas suas ocorrências e detalhes completos</p>
+                        <button type="button" 
+                                class="btn btn-secondary" 
+                                onclick="showModal('login-modal')"
+                                aria-label="Abrir formulário de login seguro">
+                            <i class="fas fa-sign-in-alt" aria-hidden="true"></i>
+                            Login Seguro
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Exemplos de Códigos -->
+                <div class="exemplos-codigo" role="region" aria-labelledby="exemplos-title">
+                    <h4 id="exemplos-title">
+                        <i class="fas fa-list" aria-hidden="true"></i> 
+                        Exemplos de Consulta
+                    </h4>
+                    <p>Clique em um código para testar a consulta pública:</p>
+                    <div class="exemplos-grid" role="group" aria-label="Códigos de exemplo para consulta">
+                        <button type="button" 
+                                class="exemplo-btn" 
+                                onclick="testarCodigo('STM000001')"
+                                aria-label="Testar consulta do código STM000001 - Buraco na rua">
+                            <span class="codigo">STM000001</span>
+                            <small>Buraco na rua</small>
+                        </button>
+                        <button type="button" 
+                                class="exemplo-btn" 
+                                onclick="testarCodigo('STM000002')"
+                                aria-label="Testar consulta do código STM000002 - Acúmulo de lixo">
+                            <span class="codigo">STM000002</span>
+                            <small>Acúmulo de lixo</small>
+                        </button>
+                        <button type="button" 
+                                class="exemplo-btn" 
+                                onclick="testarCodigo('STM000003')"
+                                aria-label="Testar consulta do código STM000003 - Falta de iluminação">
+                            <span class="codigo">STM000003</span>
+                            <small>Falta de iluminação</small>
+                        </button>
+                        <button type="button" 
+                                class="exemplo-btn" 
+                                onclick="testarCodigo('STM000004')"
+                                aria-label="Testar consulta do código STM000004 - Problema de água">
+                            <span class="codigo">STM000004</span>
+                            <small>Problema de água</small>
+                        </button>
+                        <button type="button" 
+                                class="exemplo-btn" 
+                                onclick="testarCodigo('STM000005')"
+                                aria-label="Testar consulta do código STM000005">
+                            <span class="codigo">STM000005</span>
+                            <small>Calçada danificada</small>
+                        </button>
+                        <button type="button" 
+                                class="exemplo-btn" 
+                                onclick="testarCodigo('STM000006')"
+                                aria-label="Testar consulta do código STM000006 - Sinalização inadequada">
+                            <span class="codigo">STM000006</span>
+                            <small>Sinalização inadequada</small>
+                        </button>
+                    </div>
+                    
+                    <div class="info-publica" role="note" aria-label="Informações sobre transparência">
+                        <div class="info-item">
+                            <i class="fas fa-info-circle" aria-hidden="true"></i>
+                            <span>Todas as ocorrências são públicas para garantir transparência</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-shield-alt" aria-hidden="true"></i>
+                            <span>Dados pessoais são protegidos e não aparecem na consulta pública</span>
+                        </div>
+                        <div class="info-item">
+                            <i class="fas fa-clock" aria-hidden="true"></i>
+                            <span>Status é atualizado em tempo real conforme andamento</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Resultado da Consulta -->
+                <div id="resultado-rastreamento" 
+                     class="resultado-container" 
+                     style="display: none;"
+                     role="region"
+                     aria-live="polite"
+                     aria-label="Resultado da consulta de ocorrência">
+                    <!-- Conteúdo será inserido dinamicamente -->
                 </div>
             </div>
         </div>
     </section>
 
     <!-- Contato Section -->
-    <section class="contato-section" id="contato">
+    <section class="contato-section" id="contato" aria-labelledby="contato-title">
         <div class="container">
-            <div class="section-header">
-                <h2 class="section-title">Entre em Contato</h2>
+            <header class="section-header">
+                <h2 class="section-title" id="contato-title">Entre em Contato</h2>
                 <p class="section-description">
                     Fale conosco através dos canais oficiais da Prefeitura de Santarém
                 </p>
-            </div>
+            </header>
             
             <div class="contato-content">
-                <div class="contato-info">
+                <div class="contato-info" role="complementary" aria-label="Informações de contato">
                     <div class="info-card">
-                        <div class="info-icon">
+                        <div class="info-icon" aria-hidden="true">
                             <i class="fas fa-map-marker-alt"></i>
                         </div>
                         <div class="info-content">
-                            <h4>Endereço</h4>
+                            <h3>Endereço</h3>
                             <p>Av. Tapajós, 1078 - Centro<br>Santarém - PA, 68005-080</p>
                         </div>
                     </div>
                     
                     <div class="info-card">
-                        <div class="info-icon">
+                        <div class="info-icon" aria-hidden="true">
                             <i class="fas fa-phone"></i>
                         </div>
                         <div class="info-content">
-                            <h4>Telefone</h4>
-                            <p>(93) 3522-4040</p>
+                            <h3>Telefone</h3>
+                            <p>
+                                <a href="tel:+559335224040" aria-label="Ligar para (93) 3522-4040">
+                                    (93) 3522-4040
+                                </a>
+                            </p>
                         </div>
                     </div>
                     
                     <div class="info-card">
-                        <div class="info-icon">
+                        <div class="info-icon" aria-hidden="true">
                             <i class="fas fa-envelope"></i>
                         </div>
                         <div class="info-content">
-                            <h4>E-mail</h4>
-                            <p>contato@santarem.pa.gov.br</p>
+                            <h3>E-mail</h3>
+                            <p>
+                                <a href="mailto:contato@santarem.pa.gov.br" 
+                                   aria-label="Enviar e-mail para contato@santarem.pa.gov.br">
+                                    contato@santarem.pa.gov.br
+                                </a>
+                            </p>
                         </div>
                     </div>
                     
                     <div class="info-card">
-                        <div class="info-icon">
+                        <div class="info-icon" aria-hidden="true">
                             <i class="fas fa-clock"></i>
                         </div>
                         <div class="info-content">
-                            <h4>Horário de Atendimento</h4>
-                            <p>Segunda a Sexta<br>7:30 às 13:30</p>
+                            <h3>Horário de Atendimento</h3>
+                            <p>Segunda a Sexta-feira<br>7:30 às 13:30</p>
                         </div>
                     </div>
                 </div>
                 
-                <div class="contato-form">
-                    <form id="form-contato" class="form-contact">
+                <form class="contato-form" 
+                      id="form-contato"
+                      role="form"
+                      aria-labelledby="contato-title"
+                      novalidate>
+                    <fieldset>
+                        <legend class="sr-only">Formulário de contato</legend>
+                        
                         <div class="form-row">
                             <div class="form-group">
-                                <label for="contato-nome">Nome</label>
-                                <input type="text" id="contato-nome" name="nome" required>
+                                <label for="contato-nome" class="form-label">
+                                    Nome Completo
+                                    <span class="required" aria-label="Campo obrigatório">*</span>
+                                </label>
+                                <input type="text" 
+                                       id="contato-nome" 
+                                       name="nome" 
+                                       class="form-input" 
+                                       required
+                                       aria-describedby="contato-nome-error"
+                                       aria-invalid="false">
+                                <div id="contato-nome-error" 
+                                     class="error-message" 
+                                     role="alert" 
+                                     aria-live="polite"></div>
                             </div>
+                            
                             <div class="form-group">
-                                <label for="contato-email">E-mail</label>
-                                <input type="email" id="contato-email" name="email" required>
+                                <label for="contato-email" class="form-label">
+                                    E-mail
+                                    <span class="required" aria-label="Campo obrigatório">*</span>
+                                </label>
+                                <input type="email" 
+                                       id="contato-email" 
+                                       name="email" 
+                                       class="form-input" 
+                                       required
+                                       aria-describedby="contato-email-error"
+                                       aria-invalid="false">
+                                <div id="contato-email-error" 
+                                     class="error-message" 
+                                     role="alert" 
+                                     aria-live="polite"></div>
                             </div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="contato-assunto">Assunto</label>
-                            <input type="text" id="contato-assunto" name="assunto" required>
+                            <label for="contato-assunto" class="form-label">
+                                Assunto
+                                <span class="required" aria-label="Campo obrigatório">*</span>
+                            </label>
+                            <select id="contato-assunto" 
+                                    name="assunto" 
+                                    class="form-select" 
+                                    required
+                                    aria-describedby="contato-assunto-error"
+                                    aria-invalid="false">
+                                <option value="">Selecione um assunto</option>
+                                <option value="ocorrencia">Reportar Ocorrência</option>
+                                <option value="informacao">Solicitar Informação</option>
+                                <option value="sugestao">Dar Sugestão</option>
+                                <option value="reclamacao">Fazer Reclamação</option>
+                                <option value="elogio">Enviar Elogio</option>
+                                <option value="outro">Outro</option>
+                            </select>
+                            <div id="contato-assunto-error" 
+                                 class="error-message" 
+                                 role="alert" 
+                                 aria-live="polite"></div>
                         </div>
                         
                         <div class="form-group">
-                            <label for="contato-mensagem">Mensagem</label>
-                            <textarea id="contato-mensagem" name="mensagem" rows="5" required></textarea>
+                            <label for="contato-mensagem" class="form-label">
+                                Mensagem
+                                <span class="required" aria-label="Campo obrigatório">*</span>
+                            </label>
+                            <textarea id="contato-mensagem" 
+                                      name="mensagem" 
+                                      class="form-textarea" 
+                                      rows="5" 
+                                      required
+                                      aria-describedby="contato-mensagem-help contato-mensagem-error"
+                                      aria-invalid="false"
+                                      placeholder="Descreva sua mensagem..."></textarea>
+                            <div id="contato-mensagem-help" class="form-help">
+                                Descreva detalhadamente sua solicitação ou comentário
+                            </div>
+                            <div id="contato-mensagem-error" 
+                                 class="error-message" 
+                                 role="alert" 
+                                 aria-live="polite"></div>
                         </div>
                         
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-paper-plane"></i>
-                            Enviar Mensagem
-                        </button>
-                    </form>
-                </div>
+                        <div class="form-actions">
+                            <button type="submit" 
+                                    class="btn btn-primary"
+                                    aria-describedby="contato-submit-help">
+                                <i class="fas fa-paper-plane" aria-hidden="true"></i>
+                                Enviar Mensagem
+                            </button>
+                            <div id="contato-submit-help" class="form-help">
+                                Sua mensagem será enviada para a equipe responsável
+                            </div>
+                        </div>
+                    </fieldset>
+                </form>
             </div>
         </div>
     </section>
 
     <!-- Footer -->
-    <footer class="footer">
+    <footer class="footer" role="contentinfo" aria-labelledby="footer-title">
         <div class="container">
             <div class="footer-content">
                 <div class="footer-section">
                     <div class="footer-logo">
-                        <img src="assets/logo-santarem-white.png" alt="Logo Santarém" class="footer-logo-img">
-                        <h3>Prefeitura de Santarém</h3>
-                        <p>Trabalhando por uma cidade melhor</p>
+                        <img src="assets/logo-santarem-white.png" 
+                             alt="Logo da Prefeitura de Santarém" 
+                             class="footer-logo-img">
+                        <h3 id="footer-title">Prefeitura de Santarém</h3>
+                        <p>Portal de Transparência e Participação Cidadã</p>
                     </div>
+                    
+                    <address class="footer-contact" aria-label="Informações de contato da prefeitura">
+                        <div class="contact-item">
+                            <i class="fas fa-map-marker-alt" aria-hidden="true"></i>
+                            <span>Av. Tapajós, 1078 - Centro, Santarém - PA</span>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-phone" aria-hidden="true"></i>
+                            <a href="tel:+559335224040" aria-label="Ligar para (93) 3522-4040">
+                                (93) 3522-4040
+                            </a>
+                        </div>
+                        <div class="contact-item">
+                            <i class="fas fa-envelope" aria-hidden="true"></i>
+                            <a href="mailto:contato@santarem.pa.gov.br" 
+                               aria-label="Enviar e-mail para contato@santarem.pa.gov.br">
+                                contato@santarem.pa.gov.br
+                            </a>
+                        </div>
+                    </address>
                 </div>
                 
                 <div class="footer-section">
                     <h4>Links Úteis</h4>
-                    <ul class="footer-links">
-                        <li><a href="#home">Início</a></li>
-                        <li><a href="#mapa">Mapa de Ocorrências</a></li>
-                        <li><a href="#contato">Contato</a></li>
-                        <li><a href="https://santarem.pa.gov.br" target="_blank">Portal Oficial</a></li>
-                    </ul>
+                    <nav role="navigation" aria-label="Links úteis da prefeitura">
+                        <ul class="footer-links">
+                            <li>
+                                <a href="#home" aria-label="Ir para o início da página">
+                                    Início
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#mapa" aria-label="Ir para o mapa de ocorrências">
+                                    Mapa de Ocorrências
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#contato" aria-label="Ir para a seção de contato">
+                                    Contato
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://santarem.pa.gov.br" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   aria-label="Acessar Portal Oficial da Prefeitura (abre em nova aba)">
+                                    Portal Oficial
+                                    <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
                 
                 <div class="footer-section">
                     <h4>Serviços</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Portal da Transparência</a></li>
-                        <li><a href="#">Ouvidoria</a></li>
-                        <li><a href="#">Licitações</a></li>
-                        <li><a href="#">Diário Oficial</a></li>
-                    </ul>
+                    <nav role="navigation" aria-label="Serviços da prefeitura">
+                        <ul class="footer-links">
+                            <li>
+                                <a href="https://transparencia.santarem.pa.gov.br" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   aria-label="Acessar Portal da Transparência (abre em nova aba)">
+                                    Portal da Transparência
+                                    <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://www.santarem.pa.gov.br/ouvidoria" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   aria-label="Acessar Ouvidoria Municipal (abre em nova aba)">
+                                    Ouvidoria
+                                    <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://www.santarem.pa.gov.br/licitacoes" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   aria-label="Acessar Licitações (abre em nova aba)">
+                                    Licitações
+                                    <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                            <li>
+                                <a href="https://www.santarem.pa.gov.br/diario-oficial" 
+                                   target="_blank" 
+                                   rel="noopener noreferrer"
+                                   aria-label="Acessar Diário Oficial (abre em nova aba)">
+                                    Diário Oficial
+                                    <i class="fas fa-external-link-alt" aria-hidden="true"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
                 
                 <div class="footer-section">
                     <h4>Redes Sociais</h4>
-                    <div class="social-links">
-                        <a href="#" class="social-link" aria-label="Facebook">
-                            <i class="fab fa-facebook-f"></i>
+                    <div class="social-links" role="list" aria-label="Redes sociais da prefeitura">
+                        <a href="https://facebook.com/prefeiturasantarem" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="social-link facebook"
+                           aria-label="Seguir a Prefeitura de Santarém no Facebook (abre em nova aba)"
+                           role="listitem">
+                            <i class="fab fa-facebook-f" aria-hidden="true"></i>
                         </a>
-                        <a href="#" class="social-link" aria-label="Instagram">
-                            <i class="fab fa-instagram"></i>
+                        <a href="https://instagram.com/prefeiturasantarem" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="social-link instagram"
+                           aria-label="Seguir a Prefeitura de Santarém no Instagram (abre em nova aba)"
+                           role="listitem">
+                            <i class="fab fa-instagram" aria-hidden="true"></i>
                         </a>
-                        <a href="#" class="social-link" aria-label="Twitter">
-                            <i class="fab fa-twitter"></i>
+                        <a href="https://twitter.com/prefeiturastm" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="social-link twitter"
+                           aria-label="Seguir a Prefeitura de Santarém no Twitter (abre em nova aba)"
+                           role="listitem">
+                            <i class="fab fa-twitter" aria-hidden="true"></i>
                         </a>
-                        <a href="#" class="social-link" aria-label="YouTube">
-                            <i class="fab fa-youtube"></i>
+                        <a href="https://youtube.com/prefeiturasantarem" 
+                           target="_blank" 
+                           rel="noopener noreferrer"
+                           class="social-link youtube"
+                           aria-label="Inscrever-se no canal da Prefeitura de Santarém no YouTube (abre em nova aba)"
+                           role="listitem">
+                            <i class="fab fa-youtube" aria-hidden="true"></i>
                         </a>
-                    </div>
-                    
-                    <div class="footer-contact">
-                        <p><i class="fas fa-phone"></i> (93) 3522-4040</p>
-                        <p><i class="fas fa-envelope"></i> contato@santarem.pa.gov.br</p>
                     </div>
                 </div>
             </div>
@@ -394,35 +746,201 @@
             <div class="footer-bottom">
                 <div class="footer-divider"></div>
                 <div class="footer-bottom-content">
-                    <p>&copy; 2024 Prefeitura Municipal de Santarém. Todos os direitos reservados.</p>
-                    <div class="footer-bottom-links">
-                        <a href="#">Política de Privacidade</a>
-                        <a href="#">Termos de Uso</a>
-                        <a href="#">Acessibilidade</a>
+                    <div class="copyright">
+                        <p>&copy; 2024 Prefeitura Municipal de Santarém. Todos os direitos reservados.</p>
+                        <p>
+                            <small>
+                                Desenvolvido com ❤️ para promover transparência e participação cidadã.
+                            </small>
+                        </p>
                     </div>
+                    
+                    <nav class="footer-legal" role="navigation" aria-label="Links legais">
+                        <ul>
+                            <li>
+                                <a href="#" aria-label="Ler Política de Privacidade">
+                                    Política de Privacidade
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" aria-label="Ler Termos de Uso">
+                                    Termos de Uso
+                                </a>
+                            </li>
+                            <li>
+                                <a href="#" aria-label="Ler sobre Acessibilidade">
+                                    Acessibilidade
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
                 </div>
             </div>
         </div>
     </footer>
 
-    <!-- Modal de Login -->
+    <!-- Modal de Login Unificado -->
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
-            <h2>Área do Gestor</h2>
+            <h2><i class="fas fa-sign-in-alt"></i> Acesso ao Sistema</h2>
+            <p class="modal-description">Entre com suas credenciais para acessar sua área</p>
+            
             <form id="form-login" class="form-login">
                 <div class="form-group">
-                    <label for="login-usuario">Usuário</label>
-                    <input type="text" id="login-usuario" name="usuario" required>
+                    <label for="login-email">
+                        <i class="fas fa-envelope"></i> E-mail ou Usuário
+                    </label>
+                    <input type="text" id="login-email" name="email" placeholder="email@exemplo.com ou usuário" required autocomplete="username">
+                    <small>Use seu email de cidadão ou credenciais administrativas</small>
                 </div>
+                
                 <div class="form-group">
-                    <label for="login-senha">Senha</label>
-                    <input type="password" id="login-senha" name="senha" required>
+                    <label for="login-senha">
+                        <i class="fas fa-lock"></i> Senha
+                    </label>
+                    <div class="password-input-group">
+                        <input type="password" id="login-senha" name="senha" placeholder="Digite sua senha" required autocomplete="current-password" minlength="6">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('login-senha', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <small>Mínimo 6 caracteres</small>
                 </div>
+
+                <div class="form-group">
+                    <div class="security-options">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="lembrar-login-unificado">
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">Lembrar neste dispositivo por 30 dias</span>
+                        </label>
+                    </div>
+                </div>
+                
                 <button type="submit" class="btn btn-primary">
                     <i class="fas fa-sign-in-alt"></i>
                     Entrar
                 </button>
+                
+                <div class="login-links">
+                    <a href="#" onclick="showRecuperarSenhaModal(); return false;" class="forgot-password">
+                        <i class="fas fa-key"></i> Esqueci minha senha
+                    </a>
+                    <a href="#" onclick="showCadastroModal(); return false;" class="register-link">
+                        <i class="fas fa-user-plus"></i> Primeiro acesso? Cadastre-se
+                    </a>
+                </div>
+            </form>
+            
+            <div class="modal-info">
+                <h4><i class="fas fa-shield-alt"></i> Tipos de Acesso</h4>
+                <ul>
+                    <li><i class="fas fa-user"></i> <strong>Cidadão:</strong> Acesse suas ocorrências pessoais</li>
+                    <li><i class="fas fa-user-shield"></i> <strong>Administrador:</strong> Gestão completa do sistema</li>
+                </ul>
+                <p><small>O sistema detectará automaticamente seu tipo de usuário</small></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Recuperação de Senha -->
+    <div id="recuperar-senha-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-key"></i> Recuperar Senha</h2>
+            <p class="modal-description">Digite seu email para receber as instruções de recuperação</p>
+            
+            <form id="form-recuperar-senha" class="form-login">
+                <div class="form-group">
+                    <label for="recuperar-email">
+                        <i class="fas fa-envelope"></i> E-mail cadastrado
+                    </label>
+                    <input type="email" id="recuperar-email" name="email" placeholder="email@exemplo.com" required>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-paper-plane"></i>
+                    Enviar Instruções
+                </button>
+                
+                <div class="login-links">
+                    <a href="#" onclick="showModal('login-modal'); return false;">
+                        <i class="fas fa-arrow-left"></i> Voltar ao login
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal de Cadastro -->
+    <div id="cadastro-modal" class="modal">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2><i class="fas fa-user-plus"></i> Primeiro Acesso</h2>
+            <p class="modal-description">Cadastre-se para acessar suas ocorrências com segurança</p>
+            
+            <form id="form-cadastro-cidadao" class="form-login">
+                <div class="form-group">
+                    <label for="cadastro-nome">
+                        <i class="fas fa-user"></i> Nome Completo
+                    </label>
+                    <input type="text" id="cadastro-nome" name="nome" placeholder="Digite seu nome completo" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cadastro-email">
+                        <i class="fas fa-envelope"></i> E-mail
+                    </label>
+                    <input type="email" id="cadastro-email" name="email" placeholder="email@exemplo.com" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cadastro-senha">
+                        <i class="fas fa-lock"></i> Senha
+                    </label>
+                    <div class="password-input-group">
+                        <input type="password" id="cadastro-senha" name="senha" placeholder="Crie uma senha segura" required minlength="8">
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('cadastro-senha', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                    <div class="password-strength" id="password-strength"></div>
+                    <small>Mínimo 8 caracteres, incluindo maiúscula, minúscula e número</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cadastro-confirmar-senha">
+                        <i class="fas fa-lock"></i> Confirmar Senha
+                    </label>
+                    <div class="password-input-group">
+                        <input type="password" id="cadastro-confirmar-senha" name="confirmar_senha" placeholder="Digite a senha novamente" required>
+                        <button type="button" class="toggle-password" onclick="togglePasswordVisibility('cadastro-confirmar-senha', this)">
+                            <i class="fas fa-eye"></i>
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <div class="security-options">
+                        <label class="checkbox-container">
+                            <input type="checkbox" id="aceitar-termos" required>
+                            <span class="checkmark"></span>
+                            <span class="checkbox-text">Aceito os <a href="#" target="_blank">termos de uso</a> e <a href="#" target="_blank">política de privacidade</a></span>
+                        </label>
+                    </div>
+                </div>
+                
+                <button type="submit" class="btn btn-primary">
+                    <i class="fas fa-user-plus"></i>
+                    Criar Conta
+                </button>
+                
+                <div class="login-links">
+                    <a href="#" onclick="showCidadaoLoginModal(); return false;">
+                        <i class="fas fa-arrow-left"></i> Já tenho conta
+                    </a>
+                </div>
             </form>
         </div>
     </div>

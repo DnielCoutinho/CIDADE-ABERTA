@@ -76,9 +76,60 @@ CREATE TABLE gestores (
     data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ultimo_login TIMESTAMP NULL,
     
+    -- Campos específicos para administradores
+    nivel_acesso ENUM('admin', 'gestor', 'operador') DEFAULT 'gestor',
+    permissoes JSON NULL,
+    telefone VARCHAR(20) NULL,
+    foto_perfil VARCHAR(255) NULL,
+    
     -- Índices para otimização
     INDEX idx_email (email),
+    INDEX idx_ativo (ativo),
+    INDEX idx_nivel (nivel_acesso)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- TABELA DE CIDADÃOS (para sistema de login unificado)
+-- =====================================================
+DROP TABLE IF EXISTS cidadaos;
+CREATE TABLE cidadaos (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,
+    email VARCHAR(100) UNIQUE NOT NULL,
+    senha VARCHAR(255) NOT NULL,
+    telefone VARCHAR(20) NULL,
+    cpf VARCHAR(14) NULL,
+    endereco TEXT NULL,
+    data_nascimento DATE NULL,
+    ativo BOOLEAN DEFAULT TRUE,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    ultimo_login TIMESTAMP NULL,
+    email_verificado BOOLEAN DEFAULT FALSE,
+    token_verificacao VARCHAR(100) NULL,
+    
+    -- Índices para otimização
+    INDEX idx_email (email),
+    INDEX idx_cpf (cpf),
     INDEX idx_ativo (ativo)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- =====================================================
+-- TABELA DE LOGS DO SISTEMA (para auditoria)
+-- =====================================================
+DROP TABLE IF EXISTS admin_logs;
+CREATE TABLE admin_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    admin_id INT NOT NULL,
+    acao VARCHAR(100) NOT NULL,
+    detalhes TEXT NULL,
+    ip_address VARCHAR(45) NULL,
+    user_agent TEXT NULL,
+    data_criacao TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (admin_id) REFERENCES gestores(id) ON DELETE CASCADE,
+    INDEX idx_admin (admin_id),
+    INDEX idx_acao (acao),
+    INDEX idx_data (data_criacao)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- =====================================================
@@ -117,10 +168,23 @@ INSERT INTO contatos (nome, email, telefone, assunto, mensagem, data_criacao, st
 -- =====================================================
 -- DADOS DE EXEMPLO - GESTORES
 -- =====================================================
-INSERT INTO gestores (nome, email, senha, cargo, departamento, ativo) VALUES
-('Administrador do Sistema', 'admin@santarem.pa.gov.br', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrador Geral', 'Tecnologia da Informação', TRUE),
-('João Gestor', 'joao.gestor@santarem.pa.gov.br', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Coordenador de Obras', 'Secretaria de Obras', TRUE),
-('Maria Supervisora', 'maria.supervisora@santarem.pa.gov.br', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Supervisora de Limpeza', 'Secretaria de Limpeza Urbana', TRUE);
+INSERT INTO gestores (nome, email, senha, cargo, departamento, ativo, nivel_acesso, telefone) VALUES
+('Administrador do Sistema', 'admin@santarem.pa.gov.br', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', 'Administrador Geral', 'Tecnologia da Informação', TRUE, 'admin', '(93) 3523-1234'),
+('João Gestor', 'joao.gestor@santarem.pa.gov.br', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', 'Coordenador de Obras', 'Secretaria de Obras', TRUE, 'gestor', '(93) 3523-2345'),
+('Maria Supervisora', 'maria.supervisora@santarem.pa.gov.br', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', 'Supervisora de Limpeza', 'Secretaria de Limpeza Urbana', TRUE, 'gestor', '(93) 3523-3456');
+
+-- =====================================================
+-- DADOS DE EXEMPLO - CIDADÃOS
+-- =====================================================
+INSERT INTO cidadaos (nome, email, senha, telefone, ativo, email_verificado) VALUES
+('João Silva', 'joao@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-1111', TRUE, TRUE),
+('Maria Santos', 'maria@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-2222', TRUE, TRUE),
+('Carlos Oliveira', 'carlos@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-3333', TRUE, TRUE),
+('Ana Costa', 'ana@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-4444', TRUE, TRUE),
+('Pedro Santos', 'pedro@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-5555', TRUE, TRUE),
+('Laura Silva', 'laura@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-6666', TRUE, TRUE),
+('Roberto Lima', 'roberto@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-7777', TRUE, TRUE),
+('Fernanda Souza', 'fernanda@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-8888', TRUE, TRUE);
 
 -- =====================================================
 -- VERIFICAÇÕES E RELATÓRIOS FINAIS
@@ -163,10 +227,28 @@ SELECT
     (SELECT COUNT(*) FROM ocorrencias WHERE status = 'concluida') as ocorrencias_concluidas,
     (SELECT COUNT(*) FROM contatos) as total_contatos,
     (SELECT COUNT(*) FROM contatos WHERE status = 'novo') as contatos_novos,
-    (SELECT COUNT(*) FROM gestores WHERE ativo = TRUE) as gestores_ativos;
+    (SELECT COUNT(*) FROM gestores WHERE ativo = TRUE) as gestores_ativos,
+    (SELECT COUNT(*) FROM cidadaos WHERE ativo = TRUE) as cidadaos_ativos;
 
 -- Verificar coordenadas das ocorrências
 SELECT 'COORDENADAS DAS OCORRÊNCIAS:' as relatorio;
 SELECT codigo, endereco, latitude, longitude FROM ocorrencias ORDER BY codigo;
 
+-- =====================================================
+-- INFORMAÇÕES DE LOGIN DO SISTEMA
+-- =====================================================
+SELECT 'INFORMAÇÕES DE LOGIN:' as info;
+SELECT 
+    'ADMINISTRADORES:' as tipo,
+    'Email: admin@santarem.pa.gov.br | Senha: admin123' as credenciais
+UNION ALL
+SELECT 
+    'CIDADÃOS:', 
+    'Email: joao@email.com | Senha: cidadao123'
+UNION ALL
+SELECT 
+    '', 
+    'Email: maria@email.com | Senha: cidadao123';
+
 SELECT 'SETUP COMPLETO FINALIZADO COM SUCESSO!' as status;
+SELECT 'SENHAS PADRÃO: admin123 (administradores) | cidadao123 (cidadãos)' as info_importante;

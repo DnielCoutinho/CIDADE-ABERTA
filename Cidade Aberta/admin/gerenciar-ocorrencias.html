@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Ocorrências - Cidade Aberta Santarém</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/png" href="../assets/logo-santarem.png">
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="../css/main.css">
+    <link rel="stylesheet" href="admin-panel.css">
+    
+    <!-- FontAwesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+    
+    <style>
+        :root {
+            /* Cores principais da Cidade Aberta */
+            --primary-yellow: #FEE100;
+            --primary-blue: #0B3A60;
+            --white: #FFFFFF;
+            --light-gray: #F8F9FA;
+            --dark-gray: #6C757D;
+            --text-dark: #212529;
+            --shadow: rgba(0, 0, 0, 0.1);
+            
+            /* Tipografia */
+            --font-family: 'Poppins', sans-serif;
+            --font-weight-light: 300;
+            --font-weight-regular: 400;
+            --font-weight-medium: 500;
+            --font-weight-semibold: 600;
+            --font-weight-bold: 700;
+        }
+        
+        body {
+            background: var(--light-gray);
+            font-family: var(--font-family);
+            font-weight: var(--font-weight-regular);
+            color: var(--text-dark);
+            line-height: 1.6;
+        }
+        
+        .page-header {
+            background: linear-gradient(135deg, var(--primary-blue) 0%, #1e4a73 100%);
+            color: white;
+            padding: 2rem;
+            box-shadow: 0 4px 12px rgba(11, 58, 96, 0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .page-header::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 200px;
+            height: 200px;
+            background: var(--primary-yellow);
+            opacity: 0.1;
+            border-radius: 50%;
+            transform: translate(50%, -50%);
+        }
+        
+        .page-header h1 {
+            margin: 0;
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            font-weight: var(--font-weight-bold);
+            font-size: 2.5rem;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .page-header h1 i {
+            color: var(--primary-yellow);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .page-header .subtitle {
+            opacity: 0.95;
+            margin-top: 0.5rem;
+            font-size: 1.1rem;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .controls-bar {
+            background: white;
+            padding: 1.5rem;
+            box-shadow: 0 2px 8px rgba(11, 58, 96, 0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+            border-left: 4px solid var(--primary-yellow);
+        }
+        
+        .filters {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+        
+        .filter-group label {
+            font-size: 0.875rem;
+            font-weight: var(--font-weight-medium);
+            color: var(--primary-blue);
+        }
+        
+        .filter-select, .filter-input {
+            padding: 0.5rem;
+            border: 2px solid #ced4da;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            min-width: 120px;
+            transition: all 0.3s ease;
+            font-family: var(--font-family);
+        }
+        
+        .filter-select:focus, .filter-input:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 0.2rem rgba(11, 58, 96, 0.25);
+        }
+        
+        .actions {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+        
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-weight: var(--font-weight-medium);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            font-family: var(--font-family);
+        }
+        
+        .btn-primary {
+            background: var(--primary-blue);
+            color: white;
+        }
+        
+        .btn-primary:hover {
+            background: #1e4a73;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(11, 58, 96, 0.3);
+        }
+        
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+        
+        .btn-success:hover {
+            background: #1e7e34;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .btn-secondary {
+            background: var(--dark-gray);
+            color: white;
+        }
+        
+        .btn-secondary:hover {
+            background: #545b62;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
+        }
+        
+        .btn-info {
+            background: var(--primary-yellow);
+            color: var(--primary-blue);
+            font-weight: var(--font-weight-semibold);
+        }
+        
+        .btn-info:hover {
+            background: #f5d800;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(254, 225, 0, 0.4);
+        }
+        
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            margin: 1.5rem;
+        }
+        
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 16px rgba(11, 58, 96, 0.1);
+            text-align: center;
+            border-left: 4px solid;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .stat-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50px;
+            height: 50px;
+            opacity: 0.1;
+            border-radius: 50%;
+            transform: translate(25%, -25%);
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 8px 24px rgba(11, 58, 96, 0.15);
+        }
+        
+        .stat-card.pendentes { border-left-color: #ffc107; }
+        .stat-card.pendentes::before { background: #ffc107; }
+        
+        .stat-card.andamento { border-left-color: #17a2b8; }
+        .stat-card.andamento::before { background: #17a2b8; }
+        
+        .stat-card.concluidas { border-left-color: #28a745; }
+        .stat-card.concluidas::before { background: #28a745; }
+        
+        .stat-card.canceladas { border-left-color: #dc3545; }
+        .stat-card.canceladas::before { background: #dc3545; }
+        
+        .stat-card h3 {
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: var(--font-weight-bold);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .stat-card p {
+            margin: 0.5rem 0 0 0;
+            color: var(--dark-gray);
+            font-weight: var(--font-weight-medium);
+            position: relative;
+            z-index: 2;
+        }
+        
+        .ocorrencias-container {
+            margin: 1.5rem;
+            background: white;
+            border-radius: 0.75rem;
+            box-shadow: 0 4px 16px rgba(11, 58, 96, 0.1);
+            overflow: hidden;
+            border: 1px solid rgba(11, 58, 96, 0.1);
+        }
+        
+        .table-header {
+            background: linear-gradient(135deg, var(--primary-blue), #1e4a73);
+            color: white;
+            padding: 1rem 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .table-header h3 {
+            margin: 0;
+            font-weight: var(--font-weight-semibold);
+        }
+        
+        .table-header h3 i {
+            color: var(--primary-yellow);
+            margin-right: 0.5rem;
+        }
+        
+        .table-responsive {
+            overflow-x: auto;
+        }
+        
+        .ocorrencias-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        .ocorrencias-table th,
+        .ocorrencias-table td {
+            padding: 1rem;
+            text-align: left;
+            border-bottom: 1px solid #dee2e6;
+        }
+        
+        .ocorrencias-table th {
+            background: var(--light-gray);
+            font-weight: var(--font-weight-semibold);
+            color: var(--primary-blue);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        
+        .ocorrencias-table tbody tr:hover {
+            background: rgba(254, 225, 0, 0.05);
+        }
+        
+        .status-badge {
+            padding: 0.375rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.75rem;
+            font-weight: var(--font-weight-medium);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .status-pendente { 
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7); 
+            color: #856404; 
+        }
+        .status-em_andamento { 
+            background: linear-gradient(135deg, #d1ecf1, #74b9ff); 
+            color: #0c5460; 
+        }
+        .status-concluida { 
+            background: linear-gradient(135deg, #d4edda, #00b894); 
+            color: #155724; 
+        }
+        .status-cancelada { 
+            background: linear-gradient(135deg, #f8d7da, #e17055); 
+            color: #721c24; 
+        }
+        
+        .prioridade-badge {
+            padding: 0.25rem 0.5rem;
+            border-radius: 0.375rem;
+            font-size: 0.75rem;
+            font-weight: var(--font-weight-medium);
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        
+        .prioridade-baixa { 
+            background: linear-gradient(135deg, #e2e3e5, #b2bec3); 
+            color: #383d41; 
+        }
+        .prioridade-media { 
+            background: linear-gradient(135deg, var(--primary-yellow), #f5d800); 
+            color: var(--primary-blue); 
+            font-weight: var(--font-weight-semibold);
+        }
+        .prioridade-alta { 
+            background: linear-gradient(135deg, #f5c6cb, #e84393); 
+            color: #721c24; 
+        }
+        .prioridade-urgente { 
+            background: linear-gradient(135deg, #ff6b6b, #ee5a52); 
+            color: white; 
+            animation: pulse 2s infinite;
+            font-weight: var(--font-weight-bold);
+        }
+        
+        @keyframes pulse {
+            0%, 100% { 
+                opacity: 1; 
+                transform: scale(1);
+            }
+            50% { 
+                opacity: 0.8; 
+                transform: scale(1.05);
+            }
+        }
+        
+        .action-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+        
+        .btn-sm {
+            padding: 0.375rem 0.75rem;
+            font-size: 0.875rem;
+            border-radius: 0.375rem;
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .btn-info {
+            background: var(--primary-yellow);
+            color: var(--primary-blue);
+            font-weight: var(--font-weight-semibold);
+            border: 2px solid var(--primary-yellow);
+        }
+        
+        .btn-info:hover {
+            background: #f5d800;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(254, 225, 0, 0.3);
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #212529;
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(255, 193, 7, 0.3);
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+            font-weight: var(--font-weight-medium);
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+        }
+        
+        .loading {
+            text-align: center;
+            padding: 3rem;
+            color: var(--dark-gray);
+        }
+        
+        .loading i {
+            font-size: 2rem;
+            margin-bottom: 1rem;
+            animation: spin 1s linear infinite;
+            color: var(--primary-blue);
+        }
+        
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .no-data {
+            text-align: center;
+            padding: 3rem;
+            color: var(--dark-gray);
+        }
+        
+        .no-data i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
+            opacity: 0.5;
+            color: var(--primary-blue);
+        }
+        
+        /* Modais */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(11, 58, 96, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        
+        .modal-content {
+            background-color: white;
+            margin: 5% auto;
+            padding: 0;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 800px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(11, 58, 96, 0.3);
+            border: 1px solid rgba(11, 58, 96, 0.1);
+        }
+        
+        .modal-header {
+            padding: 1.5rem;
+            border-bottom: 2px solid var(--primary-yellow);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: linear-gradient(135deg, var(--primary-blue), #1e4a73);
+            color: white;
+            border-radius: 0.75rem 0.75rem 0 0;
+        }
+        
+        .modal-header h3 {
+            margin: 0;
+            font-weight: var(--font-weight-semibold);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .modal-header h3 i {
+            color: var(--primary-yellow);
+        }
+        
+        .close {
+            font-size: 1.5rem;
+            font-weight: bold;
+            cursor: pointer;
+            color: rgba(255, 255, 255, 0.7);
+            padding: 0.25rem;
+            border-radius: 0.25rem;
+            transition: all 0.3s ease;
+        }
+        
+        .close:hover {
+            color: var(--primary-yellow);
+            background: rgba(255, 255, 255, 0.1);
+            transform: scale(1.1);
+        }
+        
+        .modal-body {
+            padding: 1.5rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            font-weight: var(--font-weight-medium);
+            color: var(--primary-blue);
+        }
+        
+        .form-control {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #ced4da;
+            border-radius: 0.375rem;
+            font-size: 1rem;
+            font-family: var(--font-family);
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary-blue);
+            box-shadow: 0 0 0 0.2rem rgba(11, 58, 96, 0.25);
+            transform: translateY(-1px);
+        }
+        
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1rem;
+        }
+        
+        .modal-footer {
+            padding: 1rem 1.5rem;
+            border-top: 2px solid var(--primary-yellow);
+            display: flex;
+            justify-content: flex-end;
+            gap: 0.75rem;
+            background: var(--light-gray);
+            border-radius: 0 0 0.75rem 0.75rem;
+        }
+        
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .controls-bar {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .filters {
+                justify-content: center;
+            }
+            
+            .actions {
+                justify-content: center;
+            }
+            
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+                margin: 1rem;
+            }
+            
+            .ocorrencias-container {
+                margin: 1rem;
+            }
+            
+            .form-row {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                width: 95%;
+                margin: 2% auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="page-header">
+        <h1>
+            <i class="fas fa-tasks"></i>
+            Gerenciar Ocorrências
+        </h1>
+        <p class="subtitle">Sistema de administração e acompanhamento de ocorrências públicas</p>
+    </div>
+
+    <div class="controls-bar">
+        <div class="filters">
+            <div class="filter-group">
+                <label for="filtro-status">Status</label>
+                <select id="filtro-status" class="filter-select">
+                    <option value="">Todos</option>
+                    <option value="pendente">Pendente</option>
+                    <option value="em_andamento">Em Andamento</option>
+                    <option value="concluida">Concluída</option>
+                    <option value="cancelada">Cancelada</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="filtro-tipo">Tipo</label>
+                <select id="filtro-tipo" class="filter-select">
+                    <option value="">Todos</option>
+                    <option value="buraco">Buraco na via</option>
+                    <option value="lixo">Lixo acumulado</option>
+                    <option value="iluminacao">Iluminação pública</option>
+                    <option value="agua">Problema de água</option>
+                    <option value="transporte">Transporte público</option>
+                    <option value="saude">Saúde</option>
+                    <option value="educacao">Educação</option>
+                    <option value="seguranca">Segurança</option>
+                    <option value="outros">Outros</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="filtro-prioridade">Prioridade</label>
+                <select id="filtro-prioridade" class="filter-select">
+                    <option value="">Todas</option>
+                    <option value="baixa">Baixa</option>
+                    <option value="media">Média</option>
+                    <option value="alta">Alta</option>
+                    <option value="urgente">Urgente</option>
+                </select>
+            </div>
+            
+            <div class="filter-group">
+                <label for="busca-codigo">Buscar</label>
+                <input type="text" id="busca-codigo" class="filter-input" placeholder="Código ou endereço...">
+            </div>
+        </div>
+        
+        <div class="actions">
+            <button onclick="exportarOcorrencias()" class="btn btn-secondary">
+                <i class="fas fa-download"></i>
+                Exportar
+            </button>
+            <button onclick="atualizarLista()" class="btn btn-primary">
+                <i class="fas fa-sync-alt"></i>
+                Atualizar
+            </button>
+            <a href="../index.html" class="btn btn-info">
+                <i class="fas fa-arrow-left"></i>
+                Voltar ao Sistema
+            </a>
+        </div>
+    </div>
+
+    <div class="stats-row">
+        <div class="stat-card pendentes">
+            <h3 id="stat-pendentes">0</h3>
+            <p>Pendentes</p>
+        </div>
+        <div class="stat-card andamento">
+            <h3 id="stat-andamento">0</h3>
+            <p>Em Andamento</p>
+        </div>
+        <div class="stat-card concluidas">
+            <h3 id="stat-concluidas">0</h3>
+            <p>Concluídas</p>
+        </div>
+        <div class="stat-card canceladas">
+            <h3 id="stat-canceladas">0</h3>
+            <p>Canceladas</p>
+        </div>
+    </div>
+
+    <div class="ocorrencias-container">
+        <div class="table-header">
+            <h3><i class="fas fa-list"></i> Lista de Ocorrências</h3>
+            <span id="total-ocorrencias">0 ocorrências</span>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="ocorrencias-table">
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Tipo</th>
+                        <th>Endereço</th>
+                        <th>Status</th>
+                        <th>Prioridade</th>
+                        <th>Cidadão</th>
+                        <th>Data</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="ocorrencias-tbody">
+                    <tr>
+                        <td colspan="8" class="loading">
+                            <i class="fas fa-spinner"></i>
+                            <p>Carregando ocorrências...</p>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Modal de Edição -->
+    <div id="modal-edicao" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-edit"></i> Editar Ocorrência</h3>
+                <span class="close" onclick="fecharModal('modal-edicao')">&times;</span>
+            </div>
+            <div class="modal-body">
+                <form id="form-edicao">
+                    <input type="hidden" id="edit-id">
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-codigo">Código</label>
+                            <input type="text" id="edit-codigo" class="form-control" readonly>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-tipo">Tipo</label>
+                            <select id="edit-tipo" class="form-control" required>
+                                <option value="buraco">Buraco na via</option>
+                                <option value="lixo">Lixo acumulado</option>
+                                <option value="iluminacao">Iluminação pública</option>
+                                <option value="agua">Problema de água</option>
+                                <option value="transporte">Transporte público</option>
+                                <option value="saude">Saúde</option>
+                                <option value="educacao">Educação</option>
+                                <option value="seguranca">Segurança</option>
+                                <option value="outros">Outros</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-endereco">Endereço</label>
+                        <input type="text" id="edit-endereco" class="form-control" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-descricao">Descrição</label>
+                        <textarea id="edit-descricao" class="form-control" required></textarea>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-status">Status</label>
+                            <select id="edit-status" class="form-control" required>
+                                <option value="pendente">Pendente</option>
+                                <option value="em_andamento">Em Andamento</option>
+                                <option value="concluida">Concluída</option>
+                                <option value="cancelada">Cancelada</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-prioridade">Prioridade</label>
+                            <select id="edit-prioridade" class="form-control" required>
+                                <option value="baixa">Baixa</option>
+                                <option value="media">Média</option>
+                                <option value="alta">Alta</option>
+                                <option value="urgente">Urgente</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="edit-observacoes">Observações Administrativas</label>
+                        <textarea id="edit-observacoes" class="form-control" placeholder="Adicione observações sobre o andamento..."></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="fecharModal('modal-edicao')" class="btn btn-secondary">Cancelar</button>
+                <button type="button" onclick="salvarEdicao()" class="btn btn-primary">
+                    <i class="fas fa-save"></i> Salvar Alterações
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de Detalhes -->
+    <div id="modal-detalhes" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3><i class="fas fa-info-circle"></i> Detalhes da Ocorrência</h3>
+                <span class="close" onclick="fecharModal('modal-detalhes')">&times;</span>
+            </div>
+            <div class="modal-body" id="detalhes-content">
+                <!-- Conteúdo será preenchido dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="fecharModal('modal-detalhes')" class="btn btn-secondary">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Configuração global
+        const API_BASE = '../api/ocorrencias.php';
+        let ocorrenciasData = [];
+        let filteredData = [];
+
+        // Inicializar página
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('🔧 Inicializando página de gerenciamento...');
+            carregarOcorrencias();
+            configurarEventListeners();
+        });
+
+        function configurarEventListeners() {
+            // Filtros
+            document.getElementById('filtro-status').addEventListener('change', aplicarFiltros);
+            document.getElementById('filtro-tipo').addEventListener('change', aplicarFiltros);
+            document.getElementById('filtro-prioridade').addEventListener('change', aplicarFiltros);
+            document.getElementById('busca-codigo').addEventListener('input', aplicarFiltros);
+
+            // Formulário de edição
+            document.getElementById('form-edicao').addEventListener('submit', function(e) {
+                e.preventDefault();
+                salvarEdicao();
+            });
+
+            // Clique fora do modal para fechar
+            window.addEventListener('click', function(e) {
+                if (e.target.classList.contains('modal')) {
+                    fecharModal(e.target.id);
+                }
+            });
+        }
+
+        async function carregarOcorrencias() {
+            try {
+                console.log('📥 Carregando ocorrências...');
+                
+                const response = await fetch(API_BASE);
+                const result = await response.json();
+
+                if (result.success) {
+                    // A API retorna result.data.ocorrencias, não result.data diretamente
+                    ocorrenciasData = result.data.ocorrencias || [];
+                    filteredData = [...ocorrenciasData];
+                    
+                    atualizarEstatisticas();
+                    renderizarTabela();
+                    
+                    console.log(`✅ ${ocorrenciasData.length} ocorrências carregadas`);
+                } else {
+                    throw new Error(result.message || 'Erro ao carregar ocorrências');
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao carregar ocorrências:', error);
+                mostrarErro('Erro ao carregar ocorrências: ' + error.message);
+            }
+        }
+
+        function atualizarEstatisticas() {
+            const stats = {
+                pendente: 0,
+                em_andamento: 0,
+                concluida: 0,
+                cancelada: 0
+            };
+
+            ocorrenciasData.forEach(ocorrencia => {
+                if (stats.hasOwnProperty(ocorrencia.status)) {
+                    stats[ocorrencia.status]++;
+                }
+            });
+
+            document.getElementById('stat-pendentes').textContent = stats.pendente;
+            document.getElementById('stat-andamento').textContent = stats.em_andamento;
+            document.getElementById('stat-concluidas').textContent = stats.concluida;
+            document.getElementById('stat-canceladas').textContent = stats.cancelada;
+        }
+
+        function aplicarFiltros() {
+            const status = document.getElementById('filtro-status').value;
+            const tipo = document.getElementById('filtro-tipo').value;
+            const prioridade = document.getElementById('filtro-prioridade').value;
+            const busca = document.getElementById('busca-codigo').value.toLowerCase();
+
+            filteredData = ocorrenciasData.filter(ocorrencia => {
+                return (!status || ocorrencia.status === status) &&
+                       (!tipo || ocorrencia.tipo === tipo) &&
+                       (!prioridade || ocorrencia.prioridade === prioridade) &&
+                       (!busca || 
+                        ocorrencia.codigo.toLowerCase().includes(busca) ||
+                        ocorrencia.endereco.toLowerCase().includes(busca) ||
+                        ocorrencia.descricao.toLowerCase().includes(busca));
+            });
+
+            renderizarTabela();
+        }
+
+        function renderizarTabela() {
+            const tbody = document.getElementById('ocorrencias-tbody');
+            const totalElement = document.getElementById('total-ocorrencias');
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8" class="no-data">
+                            <i class="fas fa-inbox"></i>
+                            <p>Nenhuma ocorrência encontrada</p>
+                        </td>
+                    </tr>
+                `;
+                totalElement.textContent = '0 ocorrências';
+                return;
+            }
+
+            const html = filteredData.map(ocorrencia => `
+                <tr>
+                    <td><strong>${ocorrencia.codigo}</strong></td>
+                    <td>${formatarTipo(ocorrencia.tipo)}</td>
+                    <td title="${ocorrencia.endereco}">${truncarTexto(ocorrencia.endereco, 30)}</td>
+                    <td><span class="status-badge status-${ocorrencia.status}">${formatarStatus(ocorrencia.status)}</span></td>
+                    <td><span class="prioridade-badge prioridade-${ocorrencia.prioridade}">${formatarPrioridade(ocorrencia.prioridade)}</span></td>
+                    <td>${ocorrencia.nome_cidadao || 'Anônimo'}</td>
+                    <td>${formatarData(ocorrencia.data_criacao)}</td>
+                    <td>
+                        <div class="action-buttons">
+                            <button onclick="verDetalhes(${ocorrencia.id})" class="btn btn-info btn-sm" title="Ver detalhes">
+                                <i class="fas fa-eye"></i>
+                            </button>
+                            <button onclick="editarOcorrencia(${ocorrencia.id})" class="btn btn-warning btn-sm" title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="excluirOcorrencia(${ocorrencia.id})" class="btn btn-danger btn-sm" title="Excluir">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+
+            tbody.innerHTML = html;
+            totalElement.textContent = `${filteredData.length} ocorrência${filteredData.length !== 1 ? 's' : ''}`;
+        }
+
+        function verDetalhes(id) {
+            const ocorrencia = ocorrenciasData.find(o => o.id === id);
+            if (!ocorrencia) return;
+
+            const content = document.getElementById('detalhes-content');
+            content.innerHTML = `
+                <div style="display: grid; gap: 1rem;">
+                    <div class="form-row">
+                        <div><strong>Código:</strong> ${ocorrencia.codigo}</div>
+                        <div><strong>Status:</strong> <span class="status-badge status-${ocorrencia.status}">${formatarStatus(ocorrencia.status)}</span></div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div><strong>Tipo:</strong> ${formatarTipo(ocorrencia.tipo)}</div>
+                        <div><strong>Prioridade:</strong> <span class="prioridade-badge prioridade-${ocorrencia.prioridade}">${formatarPrioridade(ocorrencia.prioridade)}</span></div>
+                    </div>
+                    
+                    <div><strong>Endereço:</strong> ${ocorrencia.endereco}</div>
+                    
+                    <div><strong>Descrição:</strong><br>${ocorrencia.descricao}</div>
+                    
+                    ${ocorrencia.observacoes ? `<div><strong>Observações:</strong><br>${ocorrencia.observacoes}</div>` : ''}
+                    
+                    <div class="form-row">
+                        <div><strong>Cidadão:</strong> ${ocorrencia.nome_cidadao || 'Anônimo'}</div>
+                        <div><strong>Email:</strong> ${ocorrencia.email_cidadao || 'Não informado'}</div>
+                    </div>
+                    
+                    ${ocorrencia.telefone_cidadao ? `<div><strong>Telefone:</strong> ${ocorrencia.telefone_cidadao}</div>` : ''}
+                    
+                    <div class="form-row">
+                        <div><strong>Data Criação:</strong> ${formatarDataCompleta(ocorrencia.data_criacao)}</div>
+                        ${ocorrencia.data_atualizacao ? `<div><strong>Última Atualização:</strong> ${formatarDataCompleta(ocorrencia.data_atualizacao)}</div>` : ''}
+                    </div>
+                    
+                    ${ocorrencia.latitude && ocorrencia.longitude ? `
+                        <div><strong>Localização:</strong> ${ocorrencia.latitude}, ${ocorrencia.longitude}
+                            <button onclick="abrirMapa(${ocorrencia.latitude}, ${ocorrencia.longitude})" class="btn btn-info btn-sm" style="margin-left: 10px;">
+                                <i class="fas fa-map-marker-alt"></i> Ver no Mapa
+                            </button>
+                        </div>
+                    ` : ''}
+                </div>
+            `;
+
+            abrirModal('modal-detalhes');
+        }
+
+        function editarOcorrencia(id) {
+            const ocorrencia = ocorrenciasData.find(o => o.id === id);
+            if (!ocorrencia) return;
+
+            // Preencher formulário
+            document.getElementById('edit-id').value = ocorrencia.id;
+            document.getElementById('edit-codigo').value = ocorrencia.codigo;
+            document.getElementById('edit-tipo').value = ocorrencia.tipo;
+            document.getElementById('edit-endereco').value = ocorrencia.endereco;
+            document.getElementById('edit-descricao').value = ocorrencia.descricao;
+            document.getElementById('edit-status').value = ocorrencia.status;
+            document.getElementById('edit-prioridade').value = ocorrencia.prioridade;
+            document.getElementById('edit-observacoes').value = ocorrencia.observacoes || '';
+
+            abrirModal('modal-edicao');
+        }
+
+        async function salvarEdicao() {
+            const id = document.getElementById('edit-id').value;
+            
+            const dados = {
+                id: parseInt(id),
+                tipo: document.getElementById('edit-tipo').value,
+                endereco: document.getElementById('edit-endereco').value,
+                descricao: document.getElementById('edit-descricao').value,
+                status: document.getElementById('edit-status').value,
+                prioridade: document.getElementById('edit-prioridade').value,
+                observacoes: document.getElementById('edit-observacoes').value
+            };
+
+            try {
+                const response = await fetch(API_BASE, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(dados)
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mostrarSucesso('Ocorrência atualizada com sucesso!');
+                    fecharModal('modal-edicao');
+                    carregarOcorrencias();
+                } else {
+                    throw new Error(result.message || 'Erro ao salvar alterações');
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao salvar:', error);
+                mostrarErro('Erro ao salvar alterações: ' + error.message);
+            }
+        }
+
+        async function excluirOcorrencia(id) {
+            const ocorrencia = ocorrenciasData.find(o => o.id === id);
+            if (!ocorrencia) return;
+
+            if (!confirm(`Tem certeza que deseja excluir a ocorrência ${ocorrencia.codigo}?`)) {
+                return;
+            }
+
+            try {
+                const response = await fetch(API_BASE, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ id: id })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    mostrarSucesso('Ocorrência excluída com sucesso!');
+                    carregarOcorrencias();
+                } else {
+                    throw new Error(result.message || 'Erro ao excluir ocorrência');
+                }
+
+            } catch (error) {
+                console.error('❌ Erro ao excluir:', error);
+                mostrarErro('Erro ao excluir ocorrência: ' + error.message);
+            }
+        }
+
+        function atualizarLista() {
+            carregarOcorrencias();
+        }
+
+        function exportarOcorrencias() {
+            const dados = filteredData.map(o => ({
+                Código: o.codigo,
+                Tipo: formatarTipo(o.tipo),
+                Endereço: o.endereco,
+                Descrição: o.descricao,
+                Status: formatarStatus(o.status),
+                Prioridade: formatarPrioridade(o.prioridade),
+                Cidadão: o.nome_cidadao || 'Anônimo',
+                Email: o.email_cidadao || '',
+                Telefone: o.telefone_cidadao || '',
+                'Data Criação': formatarDataCompleta(o.data_criacao),
+                'Última Atualização': o.data_atualizacao ? formatarDataCompleta(o.data_atualizacao) : '',
+                Observações: o.observacoes || ''
+            }));
+
+            const csv = converterParaCSV(dados);
+            baixarCSV(csv, 'ocorrencias_' + new Date().toISOString().slice(0, 10) + '.csv');
+            
+            mostrarSucesso('Dados exportados com sucesso!');
+        }
+
+        // Funções utilitárias
+        function formatarTipo(tipo) {
+            const tipos = {
+                'buraco': 'Buraco na via',
+                'lixo': 'Lixo acumulado',
+                'iluminacao': 'Iluminação pública',
+                'agua': 'Problema de água',
+                'transporte': 'Transporte público',
+                'saude': 'Saúde',
+                'educacao': 'Educação',
+                'seguranca': 'Segurança',
+                'outros': 'Outros'
+            };
+            return tipos[tipo] || tipo;
+        }
+
+        function formatarStatus(status) {
+            const statuses = {
+                'pendente': 'Pendente',
+                'em_andamento': 'Em Andamento',
+                'concluida': 'Concluída',
+                'cancelada': 'Cancelada'
+            };
+            return statuses[status] || status;
+        }
+
+        function formatarPrioridade(prioridade) {
+            const prioridades = {
+                'baixa': 'Baixa',
+                'media': 'Média',
+                'alta': 'Alta',
+                'urgente': 'Urgente'
+            };
+            return prioridades[prioridade] || prioridade;
+        }
+
+        function formatarData(dataString) {
+            const data = new Date(dataString);
+            return data.toLocaleDateString('pt-BR');
+        }
+
+        function formatarDataCompleta(dataString) {
+            const data = new Date(dataString);
+            return data.toLocaleDateString('pt-BR') + ' às ' + data.toLocaleTimeString('pt-BR');
+        }
+
+        function truncarTexto(texto, limite) {
+            return texto.length > limite ? texto.substring(0, limite) + '...' : texto;
+        }
+
+        function abrirModal(modalId) {
+            document.getElementById(modalId).style.display = 'block';
+            document.body.style.overflow = 'hidden';
+        }
+
+        function fecharModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+            document.body.style.overflow = 'auto';
+        }
+
+        function abrirMapa(lat, lng) {
+            const url = `https://www.google.com/maps/@${lat},${lng},17z`;
+            window.open(url, '_blank');
+        }
+
+        function converterParaCSV(dados) {
+            if (dados.length === 0) return '';
+            
+            const headers = Object.keys(dados[0]);
+            const csv = [
+                headers.join(','),
+                ...dados.map(row => headers.map(header => `"${(row[header] || '').toString().replace(/"/g, '""')}"`).join(','))
+            ].join('\n');
+            
+            return csv;
+        }
+
+        function baixarCSV(csv, filename) {
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function mostrarSucesso(mensagem) {
+            const toast = criarToast('success', mensagem);
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function mostrarErro(mensagem) {
+            const toast = criarToast('error', mensagem);
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 5000);
+        }
+
+        function criarToast(tipo, mensagem) {
+            const toast = document.createElement('div');
+            toast.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                z-index: 3000;
+                padding: 1rem 1.5rem;
+                border-radius: 0.375rem;
+                color: white;
+                font-weight: 500;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+                animation: slideInRight 0.3s ease-out;
+                max-width: 400px;
+            `;
+            
+            if (tipo === 'success') {
+                toast.style.background = '#28a745';
+            } else if (tipo === 'error') {
+                toast.style.background = '#dc3545';
+            }
+            
+            toast.innerHTML = `<i class="fas fa-${tipo === 'success' ? 'check' : 'exclamation-triangle'}"></i> ${mensagem}`;
+            
+            return toast;
+        }
+
+        // CSS para animação do toast
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
