@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teste de Coordenadas - Santarém</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <style>
+        body { margin: 0; padding: 20px; font-family: Arial, sans-serif; }
+        #map { height: 500px; width: 100%; border: 2px solid #ccc; }
+        .info { background: #f0f0f0; padding: 15px; margin: 10px 0; border-radius: 5px; }
+        .coords { background: #e8f5e8; padding: 10px; margin: 5px 0; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🗺️ Teste de Coordenadas - Santarém</h1>
+    
+    <div class="info">
+        <h3>📍 Coordenadas Testadas:</h3>
+        <div class="coords"><strong>Centro (Av. Tapajós):</strong> -2.419444, -54.708333</div>
+        <div class="coords"><strong>Rua Floriano Peixoto:</strong> -2.421111, -54.705833</div>
+        <div class="coords"><strong>Praça Tiradentes:</strong> -2.418889, -54.707222</div>
+        <div class="coords"><strong>Terminal Rodoviário:</strong> -2.426111, -54.703333</div>
+    </div>
+    
+    <div id="map"></div>
+    
+    <div class="info">
+        <p><strong>Instruções:</strong></p>
+        <ul>
+            <li>Verifique se os marcadores estão nas ruas (não no rio)</li>
+            <li>Se estiverem corretos, execute o script SQL</li>
+            <li>Se ainda estiverem errados, ajuste manualmente</li>
+        </ul>
+    </div>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+        // Inicializar mapa centrado em Santarém
+        const map = L.map('map').setView([-2.419444, -54.708333], 14);
+        
+        // Adicionar camada do mapa
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap contributors'
+        }).addTo(map);
+        
+        // Coordenadas de teste
+        const locais = [
+            {
+                nome: 'Av. Tapajós (Centro)',
+                coords: [-2.419444, -54.708333],
+                tipo: 'buraco',
+                cor: 'red'
+            },
+            {
+                nome: 'Rua Floriano Peixoto',
+                coords: [-2.421111, -54.705833],
+                tipo: 'lixo',
+                cor: 'orange'
+            },
+            {
+                nome: 'Praça Tiradentes',
+                coords: [-2.418889, -54.707222],
+                tipo: 'iluminacao',
+                cor: 'yellow'
+            },
+            {
+                nome: 'Terminal Rodoviário',
+                coords: [-2.426111, -54.703333],
+                tipo: 'transporte',
+                cor: 'blue'
+            }
+        ];
+        
+        // Adicionar marcadores
+        locais.forEach(local => {
+            const marker = L.marker(local.coords).addTo(map);
+            marker.bindPopup(`
+                <strong>${local.nome}</strong><br>
+                Tipo: ${local.tipo}<br>
+                Coords: ${local.coords[0]}, ${local.coords[1]}
+            `);
+        });
+        
+        // Adicionar evento de clique para mostrar coordenadas
+        map.on('click', function(e) {
+            const lat = e.latlng.lat.toFixed(6);
+            const lng = e.latlng.lng.toFixed(6);
+            
+            L.popup()
+                .setLatLng(e.latlng)
+                .setContent(`<strong>Coordenadas clicadas:</strong><br>Lat: ${lat}<br>Lng: ${lng}`)
+                .openOn(map);
+            
+            console.log(`Clicado em: ${lat}, ${lng}`);
+        });
+    </script>
+</body>
+</html>
