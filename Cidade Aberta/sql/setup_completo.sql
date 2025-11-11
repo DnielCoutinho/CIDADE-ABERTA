@@ -169,22 +169,22 @@ INSERT INTO contatos (nome, email, telefone, assunto, mensagem, data_criacao, st
 -- DADOS DE EXEMPLO - GESTORES
 -- =====================================================
 INSERT INTO gestores (nome, email, senha, cargo, departamento, ativo, nivel_acesso, telefone) VALUES
-('Administrador do Sistema', 'admin@santarem.pa.gov.br', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', 'Administrador Geral', 'Tecnologia da Informação', TRUE, 'admin', '(93) 3523-1234'),
-('João Gestor', 'joao.gestor@santarem.pa.gov.br', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', 'Coordenador de Obras', 'Secretaria de Obras', TRUE, 'gestor', '(93) 3523-2345'),
-('Maria Supervisora', 'maria.supervisora@santarem.pa.gov.br', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', 'Supervisora de Limpeza', 'Secretaria de Limpeza Urbana', TRUE, 'gestor', '(93) 3523-3456');
+('Administrador do Sistema', 'admin@santarem.pa.gov.br', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', 'Administrador Geral', 'Tecnologia da Informação', TRUE, 'admin', '(93) 3523-1234'),
+('João Gestor', 'joao.gestor@santarem.pa.gov.br', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', 'Coordenador de Obras', 'Secretaria de Obras', TRUE, 'gestor', '(93) 3523-2345'),
+('Maria Supervisora', 'maria.supervisora@santarem.pa.gov.br', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', 'Supervisora de Limpeza', 'Secretaria de Limpeza Urbana', TRUE, 'gestor', '(93) 3523-3456');
 
 -- =====================================================
 -- DADOS DE EXEMPLO - CIDADÃOS
 -- =====================================================
 INSERT INTO cidadaos (nome, email, senha, telefone, ativo, email_verificado) VALUES
-('João Silva', 'joao@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-1111', TRUE, TRUE),
-('Maria Santos', 'maria@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-2222', TRUE, TRUE),
-('Carlos Oliveira', 'carlos@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-3333', TRUE, TRUE),
-('Ana Costa', 'ana@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-4444', TRUE, TRUE),
-('Pedro Santos', 'pedro@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-5555', TRUE, TRUE),
-('Laura Silva', 'laura@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-6666', TRUE, TRUE),
-('Roberto Lima', 'roberto@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-7777', TRUE, TRUE),
-('Fernanda Souza', 'fernanda@email.com', '$2y$10$EkKnwn/5Q5O5Y4LQsHHdMO.sOGFhFN3rHhHgqSG9fOGnQ3E8VnHDK', '(93) 99999-8888', TRUE, TRUE);
+('João Silva', 'joao@email.com', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', '(93) 99999-1111', TRUE, TRUE),
+('Maria Santos', 'maria@email.com', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', '(93) 99999-2222', TRUE, TRUE),
+('Carlos Oliveira', 'carlos@email.com', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', '(93) 99999-3333', TRUE, TRUE),
+('Ana Costa', 'ana@email.com', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', '(93) 99999-4444', TRUE, TRUE),
+('Pedro Santos', 'pedro@email.com', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', '(93) 99999-5555', TRUE, TRUE),
+('Laura Silva', 'laura@email.com', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', '(93) 99999-6666', TRUE, TRUE),
+('Roberto Lima', 'roberto@email.com', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', '(93) 99999-7777', TRUE, TRUE),
+('Fernanda Souza', 'fernanda@email.com', '$2y$10$ZKZlwqRBcMuarJDoQFrC3O0SWRZcxi2WN4yLMnZ4xppyMTZuhrZYW', '(93) 99999-8888', TRUE, TRUE);
 
 -- =====================================================
 -- VERIFICAÇÕES E RELATÓRIOS FINAIS
@@ -231,7 +231,7 @@ SELECT
     (SELECT COUNT(*) FROM cidadaos WHERE ativo = TRUE) as cidadaos_ativos;
 
 -- Verificar coordenadas das ocorrências
-SELECT 'COORDENADAS DAS OCORRÊNCIAS:' as relatorio;
+SELECT 'COORDENadas DAS OCORRÊNCIAS:' as relatorio;
 SELECT codigo, endereco, latitude, longitude FROM ocorrencias ORDER BY codigo;
 
 -- =====================================================

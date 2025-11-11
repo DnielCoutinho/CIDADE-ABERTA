@@ -88,59 +88,36 @@ try {
         }
         
         // Tentativa 2: Verificar se é cidadão
-        // Buscar cidadão pelo email nas ocorrências
-        $sqlCidadao = "SELECT DISTINCT 
-                          nome_cidadao as nome, 
-                          email_cidadao as email,
-                          MIN(id) as first_occurrence_id
-                       FROM ocorrencias 
-                       WHERE email_cidadao = :email 
-                       GROUP BY email_cidadao, nome_cidadao";
+        $sqlCidadao = "SELECT id, nome, email, senha FROM cidadaos WHERE email = :email AND ativo = 1";
         
         $stmtCidadao = $db->prepare($sqlCidadao);
         $stmtCidadao->execute(['email' => $email]);
         $cidadao = $stmtCidadao->fetch(PDO::FETCH_ASSOC);
         
-        if ($cidadao) {
-            // Para cidadão, vamos usar uma verificação simples baseada no primeiro registro
-            // Em um sistema real, você teria uma tabela de usuários separada
-            $senhaEsperada = 'cidadao123'; // Senha padrão para cidadãos no demo
+        if ($cidadao && password_verify($senha, $cidadao['senha'])) {
+            // É um cidadão válido
+            $_SESSION['user_type'] = 'cidadao';
+            $_SESSION['cidadao_id'] = $cidadao['id'];
+            $_SESSION['cidadao_email'] = $cidadao['email'];
+            $_SESSION['cidadao_nome'] = $cidadao['nome'];
+            $_SESSION['login_timestamp'] = time();
             
-            if ($senha === $senhaEsperada) {
-                // É um cidadão válido
-                $_SESSION['user_type'] = 'cidadao';
-                $_SESSION['cidadao_email'] = $cidadao['email'];
-                $_SESSION['cidadao_nome'] = $cidadao['nome'];
-                $_SESSION['login_timestamp'] = time();
-                
-                // Configurar lembrar login
-                if ($lembrar) {
-                    setcookie('remember_cidadao', base64_encode($cidadao['email']), time() + (30 * 24 * 60 * 60), '/');
-                }
-                
-                // Log de acesso (comentado temporariamente)
-                /*
-                $logSql = "INSERT INTO logs (tipo, mensagem, ip, user_agent, data_criacao) VALUES (?, ?, ?, ?, NOW())";
-                $logStmt = $db->prepare($logSql);
-                $logStmt->execute([
-                    'cidadao_login',
-                    "Login do cidadão: {$cidadao['nome']} ({$cidadao['email']})",
-                    $_SERVER['REMOTE_ADDR'] ?? 'unknown',
-                    $_SERVER['HTTP_USER_AGENT'] ?? 'unknown'
-                ]);
-                */
-                
-                echo json_encode([
-                    'success' => true,
-                    'user_type' => 'cidadao',
-                    'user' => [
-                        'nome' => $cidadao['nome'],
-                        'email' => $cidadao['email']
-                    ],
-                    'message' => 'Login realizado com sucesso!'
-                ], JSON_UNESCAPED_UNICODE);
-                exit;
+            // Configurar lembrar login
+            if ($lembrar) {
+                setcookie('remember_cidadao', base64_encode($cidadao['id']), time() + (30 * 24 * 60 * 60), '/');
             }
+            
+            echo json_encode([
+                'success' => true,
+                'user_type' => 'cidadao',
+                'user' => [
+                    'id' => $cidadao['id'],
+                    'nome' => $cidadao['nome'],
+                    'email' => $cidadao['email']
+                ],
+                'message' => 'Login realizado com sucesso!'
+            ], JSON_UNESCAPED_UNICODE);
+            exit;
         }
         
         // Se chegou até aqui, credenciais inválidas

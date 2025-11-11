@@ -2152,9 +2152,10 @@ async function handleLoginUnificadoSubmit(e) {
         return;
     }
     
+    let originalText;
     try {
         // Mostrar loading
-        const originalText = submitButton.innerHTML;
+        originalText = submitButton.innerHTML;
         submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
         submitButton.disabled = true;
         
