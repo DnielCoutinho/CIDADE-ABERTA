@@ -15,8 +15,7 @@ abstract class BaseModel {
     
     /**
      * Validar e sanitizar dados de entrada
-     * 
-     * @param array $data
+     * * @param array $data
      * @param array $rules
      * @return array
      * @throws Exception
@@ -102,8 +101,7 @@ abstract class BaseModel {
     
     /**
      * Gerar código único para ocorrência
-     * 
-     * @return string
+     * * @return string
      */
     protected function generateUniqueCode() {
         do {
@@ -116,8 +114,7 @@ abstract class BaseModel {
     
     /**
      * Buscar registro por código
-     * 
-     * @param string $code
+     * * @param string $code
      * @return array|null
      */
     protected function findByCode($code) {
@@ -128,8 +125,7 @@ abstract class BaseModel {
     
     /**
      * Resposta JSON padronizada
-     * 
-     * @param mixed $data
+     * * @param mixed $data
      * @param string $message
      * @param int $status
      */
@@ -153,8 +149,7 @@ abstract class BaseModel {
     
     /**
      * Resposta de erro
-     * 
-     * @param string $message
+     * * @param string $message
      * @param int $status
      */
     protected function errorResponse($message, $status = 400) {
@@ -163,8 +158,7 @@ abstract class BaseModel {
     
     /**
      * Verificar se usuário está autenticado
-     * 
-     * @return array
+     * * @return array
      * @throws Exception
      */
     protected function requireAuth() {
@@ -192,8 +186,7 @@ abstract class BaseModel {
     
     /**
      * Verificar método HTTP
-     * 
-     * @param string|array $allowed
+     * * @param string|array $allowed
      * @throws Exception
      */
     protected function checkMethod($allowed) {
@@ -207,8 +200,7 @@ abstract class BaseModel {
     
     /**
      * Obter dados da requisição
-     * 
-     * @return array
+     * * @return array
      */
     protected function getRequestData() {
         $method = $_SERVER['REQUEST_METHOD'];
@@ -234,8 +226,7 @@ abstract class BaseModel {
     
     /**
      * Log de atividades do sistema
-     * 
-     * @param string $action
+     * * @param string $action
      * @param array $details
      */
     protected function logActivity($action, $details = []) {
@@ -261,8 +252,7 @@ abstract class BaseModel {
 class SecurityUtils {
     /**
      * Gerar hash seguro para senha
-     * 
-     * @param string $password
+     * * @param string $password
      * @return string
      */
     public static function hashPassword($password) {
@@ -271,8 +261,7 @@ class SecurityUtils {
     
     /**
      * Verificar senha
-     * 
-     * @param string $password
+     * * @param string $password
      * @param string $hash
      * @return bool
      */
@@ -282,8 +271,7 @@ class SecurityUtils {
     
     /**
      * Gerar token CSRF
-     * 
-     * @return string
+     * * @return string
      */
     public static function generateCSRFToken() {
         if (!isset($_SESSION['csrf_token'])) {
@@ -294,8 +282,7 @@ class SecurityUtils {
     
     /**
      * Verificar token CSRF
-     * 
-     * @param string $token
+     * * @param string $token
      * @return bool
      */
     public static function verifyCSRFToken($token) {
@@ -304,8 +291,7 @@ class SecurityUtils {
     
     /**
      * Sanitizar entrada HTML
-     * 
-     * @param string $input
+     * * @param string $input
      * @return string
      */
     public static function sanitizeHtml($input) {
@@ -314,8 +300,7 @@ class SecurityUtils {
     
     /**
      * Validar coordenadas geográficas
-     * 
-     * @param float $latitude
+     * * @param float $latitude
      * @param float $longitude
      * @return bool
      */

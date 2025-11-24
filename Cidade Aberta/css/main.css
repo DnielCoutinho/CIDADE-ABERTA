@@ -1457,18 +1457,32 @@ body {
 }
 
 .resultado-container {
-    background: var(--white);
-    padding: var(--spacing-xl);
-    border-radius: 15px;
     margin-top: var(--spacing-lg);
-    box-shadow: 0 4px 20px var(--shadow);
-    border-left: 5px solid var(--primary-blue);
+    /* Estilos de card movidos para .tracking-result */
 }
 
 /* Estilos para resultado de rastreamento */
 .tracking-result {
+    background: var(--white);
+    border-radius: 12px;
+    padding: var(--spacing-lg);
+    box-shadow: 0 4px 20px var(--shadow);
+    border: 1px solid #e9ecef;
+    /* Borda esquerda que estava no container-pai */
+    border-left: 5px solid var(--primary-blue);
     animation: fadeInUp 0.5s ease;
 }
+
+.tracking-result.success {
+    /* Agora esta classe só precisa definir a cor da borda */
+    border-left-color: var(--primary-blue);
+}
+
+.tracking-result.error {
+    border-left-color: #dc3545;
+    text-align: center;
+}
+
 
 .tracking-header {
     display: flex;
@@ -1897,30 +1911,37 @@ body {
 
 .timeline {
     position: relative;
-    padding-left: var(--spacing-lg);
+    /* REMOVIDO: padding-left: var(--spacing-lg); */
+    /* Garante que a linha não ultrapasse os marcadores */
+    overflow: hidden; 
 }
 
 .timeline::before {
     content: '';
     position: absolute;
-    left: 15px;
+    left: 15px; /* Centraliza a linha no marcador de 30px */
     top: 0;
     bottom: 0;
     width: 2px;
     background: #e9ecef;
+    z-index: 0; /* Coloca a linha atrás dos marcadores */
 }
 
 .timeline-item {
     position: relative;
     margin-bottom: var(--spacing-md);
-    display: flex;
-    align-items: flex-start;
-    gap: var(--spacing-sm);
+    /* REMOVIDO: display: flex, align-items, gap */
+    
+    /* ADICIONADO: Padding para criar espaço para o marcador */
+    padding-left: 45px; /* 30px (marcador) + 15px (espaço) */
+    
+    /* Garante que o item comece "limpo" */
+    display: block; 
 }
 
 .timeline-marker {
     position: absolute;
-    left: -23px;
+    left: 0; /* Alinha o marcador à esquerda, dentro do padding do item */
     top: 4px;
     width: 30px;
     height: 30px;
@@ -1930,7 +1951,7 @@ body {
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1;
+    z-index: 1; /* Coloca o marcador na frente da linha */
 }
 
 .timeline-item.completed .timeline-marker {
@@ -1953,8 +1974,13 @@ body {
 }
 
 .timeline-content {
-    flex: 1;
+    /* REMOVIDO: flex: 1; */
     padding-top: 2px;
+    
+    /* ADICIONADO: Garante que o texto quebre corretamente e não vaze */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    width: 100%;
 }
 
 .timeline-content h6 {
@@ -1973,6 +1999,7 @@ body {
     color: var(--dark-gray);
     font-size: 0.8rem;
 }
+
 
 /* Ações do Rastreamento */
 .tracking-actions {
@@ -2091,11 +2118,21 @@ body {
     }
     
     .timeline {
-        padding-left: var(--spacing-md);
+        /* REMOVIDO: padding-left: var(--spacing-md); */
+    }
+
+    .timeline::before {
+        left: 13px; /* Centraliza a linha no marcador de 26px */
+    }
+    
+    .timeline-item {
+        /* ADICIONADO: Padding ajustado para mobile */
+        padding-left: 40px; /* 26px (marcador) + 14px (espaço) */
     }
     
     .timeline-marker {
-        left: -19px;
+        /* REMOVIDO: left: -19px; */
+        left: 0; /* Mantém alinhado à esquerda do padding */
         width: 26px;
         height: 26px;
     }
@@ -3087,4 +3124,114 @@ nav[role="navigation"] li {
         gap: 1rem;
         text-align: center;
     }
+
+    /* === CORREÇÃO TIMELINE RESPONSIVA === */
+    .timeline {
+        /* REMOVIDO: padding-left: var(--spacing-md); */
+    }
+
+    .timeline::before {
+        left: 13px; /* Centraliza a linha no marcador de 26px */
+    }
+    
+    .timeline-item {
+        /* ADICIONADO: Padding ajustado para mobile */
+        padding-left: 40px; /* 26px (marcador) + 14px (espaço) */
+    }
+    
+    .timeline-marker {
+        /* REMOVIDO: left: -19px; */
+        left: 0; /* Mantém alinhado à esquerda do padding */
+        width: 26px;
+        height: 26px;
+    }
+    /* === FIM CORREÇÃO === */
 }
+/* ============================================================= */
+/* BLOCO DE CORREÇÃO P/ TIMELINE E CARD DUPLO (11/Nov/2025)      */
+/* Cole este código no FINAL do arquivo css/main.css             */
+/* ============================================================= */
+
+/* 1. Correção do Card Duplicado (Linha Dupla) */
+/* Remove o estilo de card do container-pai para evitar aninhamento */
+.resultado-container {
+    background: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    border-left: none !important;
+}
+
+/* Aplica o estilo de card (com borda) diretamente no card-filho */
+.tracking-result {
+    background: var(--white) !important;
+    border-radius: 12px !important;
+    padding: var(--spacing-lg) !important;
+    box-shadow: 0 4px 20px var(--shadow) !important;
+    border: 1px solid #e9ecef !important;
+    border-left: 5px solid var(--primary-blue) !important;
+}
+
+.tracking-result.success {
+    /* Garante que a borda correta seja aplicada */
+    border-left-color: var(--primary-blue) !important;
+}
+
+.tracking-result.error {
+    border-left-color: #dc3545 !important;
+}
+
+
+/* 2. Correção da Timeline (Texto "Amassado") */
+.status-timeline .timeline {
+    padding-left: 0 !important; /* Remove o padding antigo que conflitava */
+    overflow: hidden; /* Garante que a linha não vaze */
+}
+
+.status-timeline .timeline-item {
+    /* Força o item a ser um bloco com padding */
+    display: block !important;
+    padding-left: 45px !important; /* Cria espaço para o marcador */
+    
+    /* Remove o layout flex que causava o colapso */
+    gap: 0 !important;
+    align-items: stretch !important;
+}
+
+.status-timeline .timeline-marker {
+    /* Posiciona o marcador dentro do novo padding */
+    position: absolute !important;
+    left: 0 !important; /* Alinha à esquerda do item */
+    top: 4px !important;
+    
+    /* Garante que fique sobre a linha */
+    z-index: 1 !important; 
+}
+
+.status-timeline .timeline-content {
+    /* Garante que o conteúdo ocupe o espaço e quebre a linha */
+    flex: none !important; /* Remove o flex problemático */
+    width: 100% !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+}
+
+/* Ajuste da linha vertical central */
+.timeline::before {
+    left: 15px !important; /* Centraliza a linha no marcador (30px / 2) */
+    z-index: 0 !important; /* Coloca a linha atrás dos marcadores */
+}
+
+/* Correção para mobile */
+@media (max-width: 768px) {
+    .status-timeline .timeline-item {
+        padding-left: 40px !important; /* Espaço para o marcador menor */
+    }
+
+    .timeline::before {
+        left: 13px !important; /* Centraliza no marcador de 26px */
+    }
+}
+/* ============================================================= */
+/* FIM DO BLOCO DE CORREÇÃO                                      */
+/* ============================================================= */

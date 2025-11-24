@@ -8,30 +8,23 @@
     <meta name="author" content="Prefeitura de Santarém">
     <title>Cidade Aberta Santarém - Portal de Transparência</title>
     
-    <!-- Favicon -->
     <link rel="icon" type="image/x-icon" href="favicon.ico">
     
-    <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- Font Awesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
-    <!-- Leaflet CSS -->
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
           integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     
-    <!-- Custom CSS -->
     <link rel="stylesheet" href="css/main.css">
 </head>
 <body>
-    <!-- Skip Links para Navegação por Teclado -->
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
     <a href="#nav-menu" class="skip-link">Pular para a navegação</a>
     
-    <!-- Header -->
     <header class="header" id="header" role="banner">
         <nav class="navbar" role="navigation" aria-label="Menu principal">
             <div class="nav-container">
@@ -74,9 +67,7 @@
         </nav>
     </header>
 
-    <!-- Conteúdo Principal -->
     <main id="main-content" role="main">
-        <!-- Hero Section -->
         <section class="hero" id="home" role="banner" aria-labelledby="hero-title">
             <div class="hero-background" aria-hidden="true">
                 <div class="hero-overlay"></div>
@@ -120,7 +111,6 @@
             </div>
         </section>
 
-        <!-- Mapa Section -->
         <section class="mapa-section" id="mapa" aria-labelledby="mapa-title">
             <div class="container">
                 <header class="section-header">
@@ -188,7 +178,6 @@
                     </div>
                 </div>
                 
-                <!-- Formulário de Registro -->
                 <div class="registro-form" id="registro" role="form" aria-labelledby="registro-title">
                     <h3 id="registro-title">Registrar Nova Ocorrência</h3>
                     <form id="form-ocorrencia" class="form-ocorrencia" novalidate>
@@ -274,7 +263,6 @@
             </div>
         </section>
 
-        <!-- Rastreamento Section -->
         <section class="rastreamento-section" id="rastreamento" aria-labelledby="rastreamento-title">
             <div class="container">
                 <header class="section-header">
@@ -292,7 +280,6 @@
             </header>
             
             <div class="rastreamento-form">
-                <!-- Formulário Principal de Consulta -->
                 <div class="consulta-publica">
                     <div class="consulta-card" role="form" aria-labelledby="consulta-title">
                         <h3 id="consulta-title">
@@ -323,7 +310,6 @@
                     </div>
                 </div>
 
-                <!-- Área do Cidadão -->
                 <div class="acesso-cidadao">
                     <div class="cidadao-card" role="complementary" aria-labelledby="cidadao-title">
                         <h4 id="cidadao-title">
@@ -341,7 +327,6 @@
                     </div>
                 </div>
                 
-                <!-- Exemplos de Códigos -->
                 <div class="exemplos-codigo" role="region" aria-labelledby="exemplos-title">
                     <h4 id="exemplos-title">
                         <i class="fas fa-list" aria-hidden="true"></i> 
@@ -409,20 +394,17 @@
                     </div>
                 </div>
                 
-                <!-- Resultado da Consulta -->
                 <div id="resultado-rastreamento" 
                      class="resultado-container" 
                      style="display: none;"
                      role="region"
                      aria-live="polite"
                      aria-label="Resultado da consulta de ocorrência">
-                    <!-- Conteúdo será inserido dinamicamente -->
-                </div>
+                    </div>
             </div>
         </div>
     </section>
 
-    <!-- Contato Section -->
     <section class="contato-section" id="contato" aria-labelledby="contato-title">
         <div class="container">
             <header class="section-header">
@@ -594,7 +576,6 @@
         </div>
     </section>
 
-    <!-- Footer -->
     <footer class="footer" role="contentinfo" aria-labelledby="footer-title">
         <div class="container">
             <div class="footer-content">
@@ -779,7 +760,6 @@
         </div>
     </footer>
 
-    <!-- Modal de Login Unificado -->
     <div id="login-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -844,7 +824,6 @@
         </div>
     </div>
 
-    <!-- Modal de Recuperação de Senha -->
     <div id="recuperar-senha-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -873,7 +852,6 @@
         </div>
     </div>
 
-    <!-- Modal de Cadastro -->
     <div id="cadastro-modal" class="modal">
         <div class="modal-content">
             <span class="close-modal">&times;</span>
@@ -945,11 +923,9 @@
         </div>
     </div>
 
-    <!-- Leaflet JavaScript -->
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
             integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     
-    <!-- JavaScript -->
     <script src="js/app.js"></script>
 </body>
 </html>

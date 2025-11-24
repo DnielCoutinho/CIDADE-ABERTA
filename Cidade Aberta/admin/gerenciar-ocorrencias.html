@@ -714,6 +714,75 @@
         </div>
     </div>
 
+    <section class="mapa-section" id="mapa" aria-labelledby="mapa-title">
+        <div class="container">
+            <header class="section-header">
+                <h2 class="section-title" id="mapa-title">Mapa de Ocorrências</h2>
+                <p class="section-description">
+                    Visualize todas as ocorrências registradas em Santarém e acompanhe o status de cada uma
+                </p>
+            </header>
+            
+            <div class="mapa-controls" role="toolbar" aria-label="Filtros do mapa">
+                <div class="filter-controls">
+                    <button class="filter-btn active" data-filter="all" aria-pressed="true" aria-label="Mostrar todas as ocorrências">
+                        <i class="fas fa-globe" aria-hidden="true"></i>
+                        Todas
+                    </button>
+                    <button class="filter-btn" data-filter="pendente" aria-pressed="false" aria-label="Mostrar apenas ocorrências pendentes">
+                        <i class="fas fa-clock" aria-hidden="true"></i>
+                        Pendentes
+                    </button>
+                    <button class="filter-btn" data-filter="em_andamento" aria-pressed="false" aria-label="Mostrar apenas ocorrências em andamento">
+                        <i class="fas fa-tools" aria-hidden="true"></i>
+                        Em Andamento
+                    </button>
+                    <button class="filter-btn" data-filter="concluida" aria-pressed="false" aria-label="Mostrar apenas ocorrências concluídas">
+                        <i class="fas fa-check-circle" aria-hidden="true"></i>
+                        Concluídas
+                </div>
+                
+                <div class="search-control">
+                    <label for="search-input" class="sr-only">Buscar ocorrências por bairro</label>
+                    <input type="text" 
+                           placeholder="Buscar por bairro..." 
+                           class="search-input" 
+                           id="search-input"
+                           aria-label="Digite o nome do bairro para buscar">
+                    <button class="search-btn" type="button" aria-label="Executar busca">
+                        <i class="fas fa-search" aria-hidden="true"></i>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="mapa-container">
+                <div class="mapa-interactive">
+                    <div id="leaflet-map" role="application" aria-label="Mapa interativo de ocorrências em Santarém"></div>
+                    <div class="mapa-placeholder" aria-live="polite">
+                        <i class="fas fa-map-marked-alt" aria-hidden="true"></i>
+                        <p>Carregando mapa interativo...</p>
+                    </div>
+                </div>
+                
+                <div class="mapa-legend" role="img" aria-labelledby="legend-title">
+                    <h3 id="legend-title">Legenda</h3>
+                    <div class="legend-item">
+                        <span class="legend-color pendente" aria-hidden="true"></span>
+                        <span>Pendente</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color andamento" aria-hidden="true"></span>
+                        <span>Em Andamento</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-color concluido" aria-hidden="true"></span>
+                        <span>Concluído</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
     <div class="ocorrencias-container">
         <div class="table-header">
             <h3><i class="fas fa-list"></i> Lista de Ocorrências</h3>
@@ -841,18 +910,29 @@
     </div>
 
     <!-- Scripts -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
         // Configuração global
         const API_BASE = '../api/ocorrencias.php';
         let ocorrenciasData = [];
         let filteredData = [];
+        let map;
+        let markers = [];
 
         // Inicializar página
         document.addEventListener('DOMContentLoaded', function() {
             console.log('🔧 Inicializando página de gerenciamento...');
+            initMap();
             carregarOcorrencias();
             configurarEventListeners();
         });
+
+        function initMap() {
+            map = L.map('leaflet-map').setView([-2.43, -54.72], 13);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
+        }
 
         function configurarEventListeners() {
             // Filtros
@@ -860,6 +940,16 @@
             document.getElementById('filtro-tipo').addEventListener('change', aplicarFiltros);
             document.getElementById('filtro-prioridade').addEventListener('change', aplicarFiltros);
             document.getElementById('busca-codigo').addEventListener('input', aplicarFiltros);
+
+            // Filtros do mapa
+            document.querySelectorAll('.filter-btn').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    document.querySelector('.filter-btn.active').classList.remove('active');
+                    btn.classList.add('active');
+                    const filter = btn.getAttribute('data-filter');
+                    filtrarOcorrenciasMapa(filter);
+                });
+            });
 
             // Formulário de edição
             document.getElementById('form-edicao').addEventListener('submit', function(e) {
@@ -883,12 +973,12 @@
                 const result = await response.json();
 
                 if (result.success) {
-                    // A API retorna result.data.ocorrencias, não result.data diretamente
                     ocorrenciasData = result.data.ocorrencias || [];
                     filteredData = [...ocorrenciasData];
                     
                     atualizarEstatisticas();
                     renderizarTabela();
+                    renderizarOcorrenciasMapa(ocorrenciasData);
                     
                     console.log(`✅ ${ocorrenciasData.length} ocorrências carregadas`);
                 } else {
@@ -899,6 +989,52 @@
                 console.error('❌ Erro ao carregar ocorrências:', error);
                 mostrarErro('Erro ao carregar ocorrências: ' + error.message);
             }
+        }
+
+        function renderizarOcorrenciasMapa(ocorrencias) {
+            // Limpar marcadores existentes
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+
+            ocorrencias.forEach(ocorrencia => {
+                if (ocorrencia.latitude && ocorrencia.longitude) {
+                    const icon = getIconeOcorrencia(ocorrencia.status);
+                    const marker = L.marker([ocorrencia.latitude, ocorrencia.longitude], { icon: icon }).addTo(map);
+                    marker.bindPopup(`
+                        <b>${ocorrencia.tipo}</b><br>
+                        ${ocorrencia.endereco}<br>
+                        Status: ${ocorrencia.status}
+                    `);
+                    markers.push(marker);
+                }
+            });
+        }
+
+        function filtrarOcorrenciasMapa(filtro) {
+            let ocorrenciasFiltradas = ocorrenciasData;
+            if (filtro !== 'all') {
+                ocorrenciasFiltradas = ocorrenciasData.filter(o => o.status === filtro);
+            }
+            renderizarOcorrenciasMapa(ocorrenciasFiltradas);
+        }
+
+        function getIconeOcorrencia(status) {
+            const cores = {
+                pendente: 'orange',
+                em_andamento: 'blue',
+                concluida: 'green',
+                cancelada: 'red'
+            };
+            const cor = cores[status] || 'gray';
+
+            return L.icon({
+                iconUrl: `https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-${cor}.png`,
+                shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41]
+            });
         }
 
         function atualizarEstatisticas() {
@@ -991,44 +1127,53 @@
             if (!ocorrencia) return;
 
             const content = document.getElementById('detalhes-content');
+            
+            // Usando um layout mais robusto para os detalhes
             content.innerHTML = `
-                <div style="display: grid; gap: 1rem;">
-                    <div class="form-row">
-                        <div><strong>Código:</strong> ${ocorrencia.codigo}</div>
-                        <div><strong>Status:</strong> <span class="status-badge status-${ocorrencia.status}">${formatarStatus(ocorrencia.status)}</span></div>
-                    </div>
-                    
-                    <div class="form-row">
-                        <div><strong>Tipo:</strong> ${formatarTipo(ocorrencia.tipo)}</div>
-                        <div><strong>Prioridade:</strong> <span class="prioridade-badge prioridade-${ocorrencia.prioridade}">${formatarPrioridade(ocorrencia.prioridade)}</span></div>
-                    </div>
-                    
-                    <div><strong>Endereço:</strong> ${ocorrencia.endereco}</div>
-                    
-                    <div><strong>Descrição:</strong><br>${ocorrencia.descricao}</div>
-                    
-                    ${ocorrencia.observacoes ? `<div><strong>Observações:</strong><br>${ocorrencia.observacoes}</div>` : ''}
-                    
-                    <div class="form-row">
-                        <div><strong>Cidadão:</strong> ${ocorrencia.nome_cidadao || 'Anônimo'}</div>
-                        <div><strong>Email:</strong> ${ocorrencia.email_cidadao || 'Não informado'}</div>
-                    </div>
-                    
-                    ${ocorrencia.telefone_cidadao ? `<div><strong>Telefone:</strong> ${ocorrencia.telefone_cidadao}</div>` : ''}
-                    
-                    <div class="form-row">
-                        <div><strong>Data Criação:</strong> ${formatarDataCompleta(ocorrencia.data_criacao)}</div>
-                        ${ocorrencia.data_atualizacao ? `<div><strong>Última Atualização:</strong> ${formatarDataCompleta(ocorrencia.data_atualizacao)}</div>` : ''}
-                    </div>
-                    
-                    ${ocorrencia.latitude && ocorrencia.longitude ? `
-                        <div><strong>Localização:</strong> ${ocorrencia.latitude}, ${ocorrencia.longitude}
-                            <button onclick="abrirMapa(${ocorrencia.latitude}, ${ocorrencia.longitude})" class="btn btn-info btn-sm" style="margin-left: 10px;">
-                                <i class="fas fa-map-marker-alt"></i> Ver no Mapa
-                            </button>
-                        </div>
-                    ` : ''}
+                <style>
+                    .detalhes-grid {
+                        display: grid;
+                        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                        gap: 1rem;
+                        padding: 1rem;
+                        background-color: #f8f9fa;
+                        border-radius: 8px;
+                    }
+                    .detalhe-item {
+                        padding: 0.75rem;
+                        background-color: #fff;
+                        border-radius: 6px;
+                        box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+                        word-wrap: break-word; /* Garante a quebra de linha */
+                    }
+                    .detalhe-item strong {
+                        display: block;
+                        margin-bottom: 0.25rem;
+                        color: var(--primary-blue);
+                        font-size: 0.875rem;
+                    }
+                </style>
+                <div class="detalhes-grid">
+                    <div class="detalhe-item"><strong>Código:</strong> ${ocorrencia.codigo}</div>
+                    <div class="detalhe-item"><strong>Status:</strong> <span class="status-badge status-${ocorrencia.status}">${formatarStatus(ocorrencia.status)}</span></div>
+                    <div class="detalhe-item"><strong>Tipo:</strong> ${formatarTipo(ocorrencia.tipo)}</div>
+                    <div class="detalhe-item"><strong>Prioridade:</strong> <span class="prioridade-badge prioridade-${ocorrencia.prioridade}">${formatarPrioridade(ocorrencia.prioridade)}</span></div>
+                    <div class="detalhe-item" style="grid-column: 1 / -1;"><strong>Endereço:</strong> ${ocorrencia.endereco}</div>
+                    <div class="detalhe-item" style="grid-column: 1 / -1;"><strong>Descrição:</strong> ${ocorrencia.descricao}</div>
+                    ${ocorrencia.observacoes ? `<div class="detalhe-item" style="grid-column: 1 / -1;"><strong>Observações:</strong> ${ocorrencia.observacoes}</div>` : ''}
+                    <div class="detalhe-item"><strong>Cidadão:</strong> ${ocorrencia.nome_cidadao || 'Anônimo'}</div>
+                    <div class="detalhe-item"><strong>Email:</strong> ${ocorrencia.email_cidadao || 'Não informado'}</div>
+                    ${ocorrencia.telefone_cidadao ? `<div class="detalhe-item"><strong>Telefone:</strong> ${ocorrencia.telefone_cidadao}</div>` : ''}
+                    <div class="detalhe-item"><strong>Data Criação:</strong> ${formatarDataCompleta(ocorrencia.data_criacao)}</div>
+                    ${ocorrencia.data_atualizacao ? `<div class="detalhe-item"><strong>Última Atualização:</strong> ${formatarDataCompleta(ocorrencia.data_atualizacao)}</div>` : ''}
                 </div>
+                ${ocorrencia.latitude && ocorrencia.longitude ? `
+                    <div style="margin-top: 1rem; text-align: center;">
+                        <button onclick="abrirMapa(${ocorrencia.latitude}, ${ocorrencia.longitude})" class="btn btn-info">
+                            <i class="fas fa-map-marker-alt"></i> Ver no Mapa
+                        </button>
+                    </div>
+                ` : ''}
             `;
 
             abrirModal('modal-detalhes');
