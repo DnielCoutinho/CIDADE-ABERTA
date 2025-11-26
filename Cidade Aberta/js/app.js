@@ -207,6 +207,9 @@ window.showLoginModal = showLoginModal;
 window.showRecuperarSenhaModal = showRecuperarSenhaModal;
 window.showCadastroModal = showCadastroModal;
 window.togglePasswordVisibility = togglePasswordVisibility;
+window.fecharModalSucesso = fecharModalSucesso;
+window.copiarCodigo = copiarCodigo;
+window.rastreamentoScroll = rastreamentoScroll;
 
 // Inicialização da aplicação
 document.addEventListener('DOMContentLoaded', function() {
@@ -339,6 +342,9 @@ function setupEventListeners() {
     // Modal
     setupModalEvents();
 
+    // Header behavior (sticky, mobile toggle)
+    setupHeaderBehavior();
+
     // Busca no mapa
     setupMapSearch();
 
@@ -357,6 +363,53 @@ function setupEventListeners() {
             ensurePageScroll();
         }
     }, 5000);
+}
+
+// Header interactions: toggle mobile menu and shrink on scroll
+function setupHeaderBehavior() {
+    const header = document.getElementById('header');
+    const navToggle = document.getElementById('nav-toggle');
+    const navMenu = document.getElementById('nav-menu');
+
+    if (!header) return;
+
+    // Scroll shrink
+    function onScroll() {
+        if (window.scrollY > 24) header.classList.add('scrolled');
+        else header.classList.remove('scrolled');
+    }
+    window.addEventListener('scroll', onScroll);
+    onScroll();
+
+    // Mobile toggle
+    if (navToggle && navMenu) {
+        navToggle.addEventListener('click', () => {
+            const expanded = navToggle.getAttribute('aria-expanded') === 'true';
+            navToggle.setAttribute('aria-expanded', String(!expanded));
+            navToggle.classList.toggle('active');
+            navMenu.classList.toggle('active');
+        });
+
+        // Close menu when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!navMenu.classList.contains('active')) return;
+            const isClickInside = navMenu.contains(e.target) || navToggle.contains(e.target);
+            if (!isClickInside) {
+                navMenu.classList.remove('active');
+                navToggle.classList.remove('active');
+                navToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+
+        // Close on resize > mobile
+        window.addEventListener('resize', () => {
+            if (window.innerWidth > 768 && navMenu.classList.contains('active')) {
+                navMenu.classList.remove('active');
+                navToggle.classList.remove('active');
+                navToggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
 }
 
 // Inicialização do mapa
@@ -871,101 +924,360 @@ function getUserLocation() {
     );
 }
 
-// Handlers de formulários
+// Função para fechar o modal de sucesso e limpar o formulário
+function fecharModalSucesso() {
+    // Restaurar foco e limpar armadilhas de foco se existirem
+    const modal = document.getElementById('modal-sucesso');
+    if (modal) {
+        const previous = modal.dataset.previousFocus;
+        releaseFocusTrap(modal);
+        hideModal('modal-sucesso');
+        if (previous) {
+            try { document.querySelector(previous).focus(); } catch(e) { /* ignore */ }
+        }
+    } else {
+        hideModal('modal-sucesso');
+    }
+
+    // Limpar formulário e estado
+    const form = document.getElementById('form-ocorrencia');
+    if (form) form.reset();
+    // Remove o marcador temporário do mapa se existir
+    if (state.tempMarker) {
+        try { state.map.removeLayer(state.tempMarker); } catch(e) {}
+        state.tempMarker = null;
+    }
+    state.selectedLocation = null;
+}
+
+// Função para mostrar modal de sucesso com código de protocolo
+function showSuccessModal(codigo, tipo, endereco) {
+    // Criar ou atualizar o modal de sucesso
+    let modal = document.getElementById('modal-sucesso');
+    
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'modal-sucesso';
+        modal.className = 'modal';
+        document.body.appendChild(modal);
+    }
+    
+    // Tipos de ocorrências com ícones
+    const tiposIcones = {
+        'buraco': 'fas fa-road',
+        'iluminacao': 'fas fa-lightbulb',
+        'lixo': 'fas fa-trash',
+        'agua': 'fas fa-tint',
+        'esgoto': 'fas fa-water',
+        'calcada': 'fas fa-walking',
+        'sinalizacao': 'fas fa-traffic-light',
+        'outro': 'fas fa-exclamation-circle'
+    };
+    
+    const tiposLabels = {
+        'buraco': 'Buraco na Via',
+        'iluminacao': 'Iluminação Pública',
+        'lixo': 'Limpeza Urbana',
+        'agua': 'Abastecimento de Água',
+        'esgoto': 'Esgoto',
+        'calcada': 'Calçada',
+        'sinalizacao': 'Sinalização',
+        'outro': 'Outros'
+    };
+    
+    const icone = tiposIcones[tipo] || 'fas fa-check-circle';
+    const label = tiposLabels[tipo] || tipo;
+    
+    modal.innerHTML = `
+        <div class="modal-content sucesso-modal-modern">
+            <!-- CLOSE BUTTON -->
+            <button type="button" class="close-modal-btn" onclick="fecharModalSucesso()" title="Fechar">
+                <i class="fas fa-times"></i>
+            </button>
+            
+            <!-- ANIMATED ICON -->
+            <div class="success-icon-container">
+                <div class="success-checkmark">
+                    <div class="checkmark-circle"></div>
+                    <div class="checkmark-check"></div>
+                </div>
+            </div>
+            
+            <!-- SUCCESS MESSAGE -->
+            <h2 class="success-title">Ocorrência Registrada!</h2>
+            <p id="sucesso-subtitle" class="sr-only">Modal de confirmação de protocolo</p>
+            <p class="success-subtitle">Sua solicitação foi enviada com sucesso</p>
+            
+            <!-- CODE SECTION -->
+            <div class="protocol-code-section">
+                <span class="code-label">PROTOCOLO</span>
+                <div class="code-display">
+                    <span class="code-number">${codigo}</span>
+                    <button type="button" class="copy-btn-small" onclick="copiarCodigo('${codigo}')" title="Copiar código">
+                        <i class="fas fa-copy"></i>
+                    </button>
+                </div>
+                <p class="code-help">Guarde este código para acompanhar sua ocorrência</p>
+            </div>
+            
+            <!-- QUICK INFO -->
+            <div class="quick-info-grid">
+                <div class="info-box">
+                    <i class="${icone}"></i>
+                    <span>${label}</span>
+                </div>
+                <div class="info-box">
+                    <i class="fas fa-map-marker-alt"></i>
+                    <span>${endereco}</span>
+                </div>
+            </div>
+            
+            <!-- ACTION BUTTONS -->
+            <div class="modal-actions">
+                <button type="button" class="btn-action btn-action-secondary" onclick="fecharModalSucesso()">
+                    <i class="fas fa-home"></i>
+                    Voltar
+                </button>
+                <button type="button" class="btn-action btn-action-primary" onclick="rastreamentoScroll('${codigo}')">
+                    <i class="fas fa-search"></i>
+                    Rastrear
+                </button>
+            </div>
+        </div>
+    `;
+    
+    showModal('modal-sucesso');
+    
+    // Acessibilidade: atributos ARIA
+    modal.setAttribute('role', 'dialog');
+    modal.setAttribute('aria-modal', 'true');
+    modal.setAttribute('aria-labelledby', 'sucesso-title');
+    // Ajustar título com id para referenciar
+    const titleEl = modal.querySelector('.success-title');
+    if (titleEl) titleEl.id = 'sucesso-title';
+
+    // Salvar referência ao elemento que estava com foco
+    try {
+        const prev = document.activeElement;
+        if (prev && prev.tagName) modal.dataset.previousFocus = prev.tagName.toLowerCase() + (prev.id ? `#${prev.id}` : '') + (prev.className ? `.${prev.className.split(' ').join('.')}` : '');
+    } catch(e) {}
+
+    // Preparar focus trap e focar no botão de fechar
+    const closeBtn = modal.querySelector('.close-modal-btn');
+    if (closeBtn) closeBtn.setAttribute('aria-label', 'Fechar');
+    trapFocusForModal(modal);
+    setTimeout(() => {
+        if (closeBtn) closeBtn.focus();
+    }, 50);
+    
+    // Rolar até o formulário onde o usuário está
+    const registroForm = document.getElementById('registro');
+    if (registroForm) {
+        registroForm.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    
+    // Som de sucesso (opcional)
+    playSuccessSound();
+}
+
+// Função para copiar código para clipboard
+function copiarCodigo(codigo) {
+    navigator.clipboard.writeText(codigo).then(() => {
+        // Mostrar snackbar específico de cópia
+        showCopySnackbar('Código copiado!');
+    }).catch(err => {
+        console.error('Erro ao copiar:', err);
+        showMessage('error', 'Erro ao copiar o código');
+    });
+}
+
+// Mostrar pequeno snackbar de confirmação (visível temporariamente)
+function showCopySnackbar(text) {
+    // Remover snack anterior
+    const existing = document.getElementById('copy-snackbar');
+    if (existing) existing.remove();
+
+    const snack = document.createElement('div');
+    snack.id = 'copy-snackbar';
+    snack.className = 'copy-snackbar';
+    snack.setAttribute('role', 'status');
+    snack.setAttribute('aria-live', 'polite');
+    snack.innerHTML = `<span>${text}</span>`;
+    document.body.appendChild(snack);
+
+    // Auto-hide após 2.2s
+    setTimeout(() => {
+        snack.classList.add('visible');
+    }, 10);
+    setTimeout(() => {
+        snack.classList.remove('visible');
+        setTimeout(() => { snack.remove(); }, 300);
+    }, 2200);
+}
+
+// Foco travado dentro do modal
+function trapFocusForModal(modal) {
+    if (!modal) return;
+    // Encontrar elementos focáveis
+    const focusableSelectors = 'a[href], area[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), button:not([disabled]), [tabindex]:not([tabindex="-1"])';
+    const focusable = Array.from(modal.querySelectorAll(focusableSelectors));
+    if (focusable.length === 0) return;
+
+    // Handler para trap
+    function keyHandler(e) {
+        if (e.key === 'Tab') {
+            const first = focusable[0];
+            const last = focusable[focusable.length -1];
+            if (e.shiftKey) {
+                if (document.activeElement === first) {
+                    e.preventDefault();
+                    last.focus();
+                }
+            } else {
+                if (document.activeElement === last) {
+                    e.preventDefault();
+                    first.focus();
+                }
+            }
+        } else if (e.key === 'Escape') {
+            // Fechar modal com ESC
+            fecharModalSucesso();
+        }
+    }
+
+    // Armazenar o handler para remover depois
+    modal._focusTrapHandler = keyHandler;
+    document.addEventListener('keydown', keyHandler);
+}
+
+function releaseFocusTrap(modal) {
+    if (!modal) return;
+    const handler = modal._focusTrapHandler;
+    if (handler) {
+        document.removeEventListener('keydown', handler);
+        delete modal._focusTrapHandler;
+    }
+}
+
+// Função para rolar até rastreamento e preencher o código
+function rastreamentoScroll(codigo) {
+    const rastreamentoSection = document.getElementById('rastreamento');
+    rastreamentoSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
+    // Fechar modal primeiro
+    fecharModalSucesso();
+    
+    // Preencher o campo de rastreamento
+    setTimeout(() => {
+        const inputRastreamento = document.getElementById('id-ocorrencia');
+        if (inputRastreamento) {
+            inputRastreamento.value = codigo;
+            inputRastreamento.focus();
+        }
+    }, 500);
+}
+
+// Função para reproduzir som de sucesso (opcional)
+function playSuccessSound() {
+    // Criar um som de sucesso usando API de áudio do navegador
+    try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        
+        oscillator.connect(gain);
+        gain.connect(audioContext.destination);
+        
+        // Primeiro bip
+        oscillator.frequency.value = 800;
+        gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+        oscillator.start(audioContext.currentTime);
+        oscillator.stop(audioContext.currentTime + 0.1);
+        
+        // Segundo bip
+        setTimeout(() => {
+            oscillator.frequency.value = 1000;
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.1);
+        }, 150);
+    } catch (e) {
+        // Se não conseguir reproduzir som, apenas continua sem som
+        console.log('Som de sucesso desabilitado ou não suportado');
+    }
+}
+
 async function handleOcorrenciaSubmit(e) {
     e.preventDefault();
     
     const formData = new FormData(e.target);
     const submitButton = e.target.querySelector('.btn-submit');
+    const mapContainer = document.querySelector('.mapa-container');
     
-    // Validar se uma localização foi selecionada
+    // VALIDACAO CRÍTICA: Localização no Mapa
     if (!state.selectedLocation) {
-        showMessage('error', 'Por favor, clique no mapa para selecionar a localização da ocorrência.');
+        // UX: Rola até o mapa, pisca a borda e mostra erro
+        mapContainer.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        mapContainer.style.border = "3px solid #dc3545";
+        mapContainer.style.transition = "border 0.3s";
+        
+        setTimeout(() => { mapContainer.style.border = "none"; }, 2000);
+        
+        showMessage('error', '📍 É OBRIGATÓRIO clicar no mapa para marcar a localização exata!');
         return;
     }
     
-    // Mostrar loading
+    // Trava botão para evitar duplo clique
     const originalText = submitButton.innerHTML;
-    submitButton.innerHTML = '<div class="loading"></div> Enviando...';
+    submitButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Enviando...';
     submitButton.disabled = true;
     
     try {
-        // Preparar dados para envio
         const data = {
             tipo: formData.get('tipo'),
             descricao: formData.get('descricao'),
             endereco: formData.get('endereco'),
-            latitude: state.selectedLocation.lat,
-            longitude: state.selectedLocation.lng,
+            latitude: state.selectedLocation.lat, // Pega do state global
+            longitude: state.selectedLocation.lng, // Pega do state global
             nome_cidadao: formData.get('nome'),
             email_cidadao: formData.get('email') || ''
         };
         
-        // Enviar para API
         const response = await fetch(CONFIG.API_ENDPOINTS.ocorrencias, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(data)
         });
         
         const result = await response.json();
         
         if (result.success) {
-            const novaOcorrencia = {
-                id: result.data.id,
-                codigo: result.data.codigo,
-                tipo: data.tipo,
-                descricao: data.descricao,
-                endereco: data.endereco,
-                coordenadas: [data.latitude, data.longitude],
-                latitude: data.latitude,
-                longitude: data.longitude,
-                status: 'pendente',
-                data_criacao: result.data.data_criacao,
-                nome_cidadao: data.nome_cidadao,
-                email_cidadao: data.email_cidadao
-            };
+            // Mostrar modal de sucesso com o código
+            showSuccessModal(result.data.codigo, data.tipo, data.endereco);
             
-            // Adicionar à lista de ocorrências
-            state.ocorrencias.push(novaOcorrencia);
-            
-            // Adicionar marcador no mapa
-            const newMarker = createMapMarker(novaOcorrencia);
-            if (newMarker) {
-                state.markersLayer.addLayer(newMarker);
-                state.markers.push({ marker: newMarker, ocorrencia: novaOcorrencia });
-            }
-            
-            // Remover marcador temporário
-            if (state.tempMarker) {
-                state.map.removeLayer(state.tempMarker);
-                state.tempMarker = null;
-            }
-            
-            // Centralizar mapa na nova ocorrência
-            state.map.setView([novaOcorrencia.latitude, novaOcorrencia.longitude], 16);
-            
-            // Abrir popup do novo marcador
-            setTimeout(() => {
-                newMarker.openPopup();
-            }, 500);
-            
-            showMessage('success', `Ocorrência registrada com sucesso! Código: ${result.data.codigo}`);
+            // Limpa formulário e estado
             e.target.reset();
             state.selectedLocation = null;
+            if (state.tempMarker) state.map.removeLayer(state.tempMarker);
             
-            // Atualizar resultado de rastreamento
-            updateTrackingResult(novaOcorrencia);
+            // Adiciona a nova ocorrência ao mapa imediatamente (sem precisar recarregar)
+            const novaOcorrencia = {
+                ...data,
+                codigo: result.data.codigo,
+                status: 'pendente',
+                id: result.data.id
+            };
+            createMapMarker(novaOcorrencia).addTo(state.markersLayer);
             
         } else {
-            throw new Error(result.message || 'Erro desconhecido');
+            throw new Error(result.message || 'Erro ao salvar.');
         }
         
     } catch (error) {
-        console.error('Erro ao registrar ocorrência:', error);
-        showMessage('error', 'Erro ao registrar ocorrência: ' + error.message);
+        console.error('Erro:', error);
+        showMessage('error', error.message);
     } finally {
         submitButton.innerHTML = originalText;
         submitButton.disabled = false;
@@ -1067,136 +1379,274 @@ async function handleRastreamentoSubmit(e) {
     }
 }
 
+
+// --- ATUALIZE A FUNÇÃO NO SEU ARQUIVO JS/APP.JS ---
+
 function updateTrackingResult(ocorrencia) {
     const resultadoElement = document.getElementById('resultado-rastreamento');
     
-    // Mapa de status com cores e ícones
+    // Configuração de Status
     const statusMap = {
-        'pendente': { 
-            label: 'Pendente', 
-            class: 'pendente', 
-            icon: 'fas fa-clock',
-            description: 'Aguardando análise da equipe técnica'
-        },
-        'em_andamento': { 
-            label: 'Em Andamento', 
-            class: 'em-andamento', 
-            icon: 'fas fa-tools',
-            description: 'Equipe está trabalhando na resolução'
-        },
-        'concluida': { 
-            label: 'Concluída', 
-            class: 'concluida', 
-            icon: 'fas fa-check-circle',
-            description: 'Problema resolvido com sucesso!'
-        },
-        'cancelada': { 
-            label: 'Cancelada', 
-            class: 'cancelada', 
-            icon: 'fas fa-times-circle',
-            description: 'Ocorrência cancelada'
-        }
+        'pendente': { label: 'Pendente', icon: 'fas fa-clock', color: '#ffd700', bgColor: '#fffbf0' },
+        'em_andamento': { label: 'Em Andamento', icon: 'fas fa-spinner', color: '#1e90ff', bgColor: '#e3f2fd' },
+        'concluida': { label: 'Concluída', icon: 'fas fa-check-circle', color: '#28a745', bgColor: '#e8f5e9' },
+        'cancelada': { label: 'Cancelada', icon: 'fas fa-ban', color: '#dc3545', bgColor: '#ffebee' }
     };
     
-    const statusInfo = statusMap[ocorrencia.status] || { 
-        label: ocorrencia.status, 
-        class: 'pendente', 
-        icon: 'fas fa-question-circle',
-        description: 'Status em análise'
-    };
+    const statusKey = ocorrencia.status || 'pendente';
+    const currentStatus = statusMap[statusKey];
     
-    // Formatação do tipo
-    const tipoFormatado = ocorrencia.tipo.charAt(0).toUpperCase() + ocorrencia.tipo.slice(1).replace('_', ' ');
-    
+    const tipo = ocorrencia.tipo ? 
+        ocorrencia.tipo.charAt(0).toUpperCase() + ocorrencia.tipo.slice(1).replace('_', ' ') : 'Geral';
+
+    const timelineHTML = ocorrencia.timeline ? ocorrencia.timeline.map((item) => {
+        let itemClass = '';
+        if (item.concluido) itemClass = 'completed';
+        if (item.status === statusKey) itemClass += ' active';
+
+        return `
+        <div class="timeline-item ${itemClass}">
+            <div class="timeline-marker">
+                <i class="${item.icon || 'fas fa-circle'}"></i>
+            </div>
+            <div class="timeline-content">
+                <h6>${item.titulo || item.label}</h6>
+                <p>${item.descricao}</p>
+                ${item.data_formatada ? `<small><i class="far fa-calendar-alt"></i> ${item.data_formatada}</small>` : ''}
+            </div>
+        </div>
+        `;
+    }).join('') : '<div class="timeline-empty"><i class="fas fa-inbox"></i> <p>Histórico será atualizado em breve</p></div>';
+
+    // Renderiza o HTML com novo design
     resultadoElement.innerHTML = `
-        <div class="tracking-result success">
-            <div class="tracking-header">
-                <div class="tracking-code">
-                    <i class="fas fa-barcode"></i>
-                    <span>Código: <strong>${ocorrencia.codigo}</strong></span>
-                </div>
-                <div class="tracking-status ${statusInfo.class}">
-                    <i class="${statusInfo.icon}"></i>
-                    <span>${statusInfo.label}</span>
-                </div>
-            </div>
-            
-            <div class="tracking-details">
-                <div class="detail-section">
-                    <h5><i class="fas fa-info-circle"></i> Informações da Ocorrência</h5>
-                    <div class="detail-grid">
-                        <div class="detail-item">
-                            <label>Tipo:</label>
-                            <span>${tipoFormatado}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Data de Registro:</label>
-                            <span>${ocorrencia.data_criacao_formatada}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Endereço:</label>
-                            <span>${ocorrencia.endereco}</span>
-                        </div>
-                        <div class="detail-item">
-                            <label>Solicitante:</label>
-                            <span>${ocorrencia.nome_cidadao || 'Anônimo'}</span>
-                        </div>
+        <div class="tracking-result-modern">
+            <!-- STATUS CARD PRINCIPAL -->
+            <div class="status-card" style="background: linear-gradient(135deg, ${currentStatus.color} 0%, ${currentStatus.color}dd 100%); color: white; padding: 2.5rem; border-radius: 16px; margin-bottom: 2rem; box-shadow: 0 10px 40px rgba(0,0,0,0.1); position: relative; overflow: hidden;">
+                <div style="position: absolute; top: -50%; right: -50%; width: 300px; height: 300px; background: rgba(255,255,255,0.1); border-radius: 50%;"></div>
+                <div style="position: relative; z-index: 1;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+                        <i class="${currentStatus.icon}" style="font-size: 3.5rem; opacity: 0.8;"></i>
+                        <span style="font-size: 0.9rem; background: rgba(255,255,255,0.3); padding: 0.5rem 1rem; border-radius: 20px; font-weight: 600;">Status Atual</span>
                     </div>
+                    <h3 style="font-size: 2.5rem; margin: 0; font-weight: 700; margin-bottom: 0.5rem;">${currentStatus.label}</h3>
+                    <p style="margin: 0; opacity: 0.9; font-size: 1.05rem;">Protocolo: <strong>#${ocorrencia.codigo}</strong></p>
                 </div>
-                
-                <div class="detail-section">
-                    <h5><i class="fas fa-file-alt"></i> Descrição</h5>
-                    <p class="description">${ocorrencia.descricao}</p>
+            </div>
+
+            <!-- INFORMAÇÕES EM LINHA -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.2rem; margin-bottom: 2.5rem;">
+                <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid #f0f0f0; transition: all 0.3s;">
+                    <div style="color: #999; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 0.5px;">Tipo</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #0B3A60;">${tipo}</div>
                 </div>
-                
-                ${ocorrencia.observacoes ? `
-                <div class="detail-section">
-                    <h5><i class="fas fa-comment"></i> Observações da Equipe</h5>
-                    <p class="observations">${ocorrencia.observacoes}</p>
+                <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid #f0f0f0; transition: all 0.3s;">
+                    <div style="color: #999; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 0.5px;">Data Abertura</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #0B3A60;"><i class="far fa-calendar-alt" style="margin-right: 0.5rem; color: #FEE100;"></i>${ocorrencia.data_criacao_formatada}</div>
                 </div>
-                ` : ''}
-                
-                <div class="detail-section">
-                    <h5><i class="fas fa-clock"></i> Tempo de Processamento</h5>
-                    <p class="processing-time">
-                        Tempo decorrido: <strong>${ocorrencia.tempo_processamento.tempo_decorrido}</strong>
-                        ${ocorrencia.tempo_processamento.tempo_resolucao ? 
-                            `<br>Resolvida em: <strong>${ocorrencia.tempo_processamento.tempo_resolucao}</strong>` : ''}
-                    </p>
+                <div style="background: white; padding: 1.5rem; border-radius: 12px; border: 2px solid #f0f0f0; transition: all 0.3s;">
+                    <div style="color: #999; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; margin-bottom: 0.75rem; letter-spacing: 0.5px;">Localização</div>
+                    <div style="font-size: 1.2rem; font-weight: 600; color: #0B3A60;"><i class="fas fa-map-marker-alt" style="margin-right: 0.5rem; color: #dc3545;"></i>${ocorrencia.endereco}</div>
+                </div>
+            </div>
+
+            <!-- DESCRIÇÃO -->
+            <div style="margin-bottom: 2.5rem;">
+                <h4 style="color: #0B3A60; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fas fa-message" style="color: #1e90ff;"></i> Descrição da Ocorrência
+                </h4>
+                <div style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%); padding: 1.75rem; border-radius: 12px; border-left: 5px solid #1e90ff; color: #555; line-height: 1.7;">
+                    ${ocorrencia.descricao}
+                </div>
+            </div>
+
+            ${ocorrencia.observacoes ? `
+            <!-- NOTA DA PREFEITURA -->
+            <div style="margin-bottom: 2.5rem; background: linear-gradient(135deg, #fffbf0 0%, #fef9f3 100%); padding: 1.75rem; border-radius: 12px; border-left: 5px solid #FEE100;">
+                <h4 style="color: #0B3A60; font-weight: 700; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; margin-top: 0;">
+                    <i class="fas fa-clipboard-check" style="color: #FEE100;"></i> Nota da Prefeitura
+                </h4>
+                <p style="color: #555; margin: 0; line-height: 1.7;">${ocorrencia.observacoes}</p>
+            </div>` : ''}
+            
+            <!-- TIMELINE -->
+            <div style="margin-bottom: 2rem;">
+                <h4 style="color: #0B3A60; font-weight: 700; margin-bottom: 1.5rem; display: flex; align-items: center; gap: 0.75rem;">
+                    <i class="fas fa-stream" style="color: #0B3A60;"></i> Histórico de Atualizações
+                </h4>
+                <div class="timeline-modern">
+                    ${timelineHTML}
                 </div>
             </div>
             
-            <div class="status-timeline">
-                <h5><i class="fas fa-route"></i> Acompanhamento</h5>
-                <div class="timeline">
-                    ${ocorrencia.timeline.map(item => `
-                        <div class="timeline-item ${item.concluido ? 'completed' : ''} ${item.ativo ? 'active' : ''}">
-                            <div class="timeline-marker" style="border-color: ${getTimelineColor(item.cor)}">
-                                <i class="${item.icon}" style="color: ${getTimelineColor(item.cor)}"></i>
-                            </div>
-                            <div class="timeline-content">
-                                <h6>${item.titulo}</h6>
-                                <p>${item.descricao}</p>
-                                ${item.data_formatada ? `<small>${item.data_formatada}</small>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-            
-            <div class="tracking-actions">
-                <button type="button" class="btn btn-secondary" onclick="clearTrackingResult()">
-                    <i class="fas fa-search"></i> Nova Busca
+            <!-- AÇÕES -->
+            <div style="display: flex; gap: 1rem; justify-content: center; padding-top: 1.5rem; border-top: 2px solid #f0f0f0;">
+                <button type="button" onclick="document.getElementById('id-ocorrencia').value=''; document.getElementById('resultado-rastreamento').innerHTML=''; document.getElementById('id-ocorrencia').focus();" style="background: white; color: #0B3A60; padding: 0.9rem 1.8rem; border: 2px solid #0B3A60; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; transition: all 0.3s; font-size: 1rem;">
+                    <i class="fas fa-search"></i> Nova Consulta
                 </button>
-                ${ocorrencia.latitude && ocorrencia.longitude ? `
-                <button type="button" class="btn btn-primary" onclick="focusOnMap(${ocorrencia.latitude}, ${ocorrencia.longitude})">
-                    <i class="fas fa-map-marker-alt"></i> Ver no Mapa
+                <button type="button" onclick="copiarCodigo('${ocorrencia.codigo}')" style="background: linear-gradient(135deg, #0B3A60 0%, #1a5490 100%); color: white; padding: 0.9rem 1.8rem; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: 0.75rem; transition: all 0.3s; font-size: 1rem;">
+                    <i class="fas fa-copy"></i> Copiar Código
                 </button>
-                ` : ''}
             </div>
         </div>
     `;
+    
+    // Adicionar estilos CSS para a timeline moderna
+    const style = document.createElement('style');
+    style.textContent = `
+        .timeline-modern {
+            position: relative;
+            padding: 1rem 0;
+        }
+        
+        .timeline-modern::before {
+            content: '';
+            position: absolute;
+            left: 20px;
+            top: 0;
+            bottom: 0;
+            width: 3px;
+            background: linear-gradient(180deg, #1e90ff 0%, #0B3A60 50%, #28a745 100%);
+        }
+        
+        .timeline-item {
+            position: relative;
+            margin-bottom: 1.5rem;
+            padding-left: 70px;
+            opacity: 0.7;
+            transition: all 0.3s ease;
+        }
+        
+        .timeline-item.completed {
+            opacity: 1;
+        }
+        
+        .timeline-item.active {
+            opacity: 1;
+        }
+        
+        .timeline-marker {
+            position: absolute;
+            left: 8px;
+            top: 2px;
+            width: 28px;
+            height: 28px;
+            background: white;
+            border: 3px solid #0B3A60;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            color: #0B3A60;
+            z-index: 2;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        
+        .timeline-item.completed .timeline-marker {
+            background: #28a745;
+            border-color: #28a745;
+            color: white;
+        }
+        
+        .timeline-item.active .timeline-marker {
+            background: #1e90ff;
+            border-color: #1e90ff;
+            color: white;
+            box-shadow: 0 0 0 12px rgba(30, 144, 255, 0.15), 0 2px 8px rgba(0,0,0,0.1);
+            transform: scale(1.15);
+        }
+        
+        .timeline-content {
+            background: white;
+            padding: 1.2rem;
+            border-radius: 10px;
+            border: 2px solid #f0f0f0;
+            transition: all 0.3s ease;
+        }
+        
+        .timeline-item.completed .timeline-content {
+            background: #f0f7ff;
+            border-color: #1e90ff;
+        }
+        
+        .timeline-item.active .timeline-content {
+            background: #e3f2fd;
+            border: 2px solid #1e90ff;
+            box-shadow: 0 4px 12px rgba(30, 144, 255, 0.15);
+        }
+        
+        .timeline-content h6 {
+            margin: 0 0 0.5rem 0;
+            color: #0B3A60;
+            font-weight: 700;
+            font-size: 1rem;
+        }
+        
+        .timeline-content p {
+            margin: 0 0 0.5rem 0;
+            color: #666;
+            font-size: 0.95rem;
+        }
+        
+        .timeline-content small {
+            color: #999;
+            font-size: 0.85rem;
+        }
+        
+        .timeline-empty {
+            text-align: center;
+            padding: 2rem;
+            color: #999;
+        }
+        
+        .timeline-empty i {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            opacity: 0.5;
+        }
+    `;
+    
+    if (!document.getElementById('timeline-modern-styles')) {
+        style.id = 'timeline-modern-styles';
+        document.head.appendChild(style);
+    }
 }
+
+// Função auxiliar para cores da timeline
+function getTimelineColor(cor) {
+    const colors = {
+        'blue': '#0B3A60',
+        'orange': '#FFA500',
+        'green': '#28a745',
+        'red': '#dc3545',
+        'gray': '#6c757d'
+    };
+    return colors[cor] || colors.blue;
+}
+
+
+// Nova função auxiliar para rolar até o mapa somente quando clicado
+window.verNoMapaDetalhado = function(lat, lng) {
+    const mapElement = document.getElementById('mapa');
+    
+    // Rola até o mapa
+    mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Atualiza a visão do mapa (usando a variável global state.map)
+    if (window.cidadeAberta && window.cidadeAberta.state && window.cidadeAberta.state.map) {
+        setTimeout(() => {
+            window.cidadeAberta.state.map.setView([lat, lng], 17);
+            
+            // Abre o popup do marcador correspondente se existir
+            L.popup()
+                .setLatLng([lat, lng])
+                .setContent('<b>Local da Ocorrência</b><br>Aqui está o problema relatado.')
+                .openOn(window.cidadeAberta.state.map);
+        }, 800); // Espera o scroll terminar
+    }
+};
 
 function getTimelineColor(cor) {
     const colors = {
@@ -2001,13 +2451,7 @@ function showAdminPanel() {
                             </div>
                         </button>
                         
-                        <button onclick="showRelatorios()" class="admin-option-btn">
-                            <i class="fas fa-chart-bar"></i>
-                            <div>
-                                <strong>Relatórios</strong>
-                                <small>Estatísticas e análises do sistema</small>
-                            </div>
-                        </button>
+                        <!-- Relatórios removido (não implementado) -->
                         
                         <button onclick="logout()" class="admin-option-btn logout-btn">
                             <i class="fas fa-sign-out-alt"></i>
@@ -2061,13 +2505,6 @@ function showOcorrenciasAdmin() {
     }, 1000);
 }
 
-function showRelatorios() {
-    hideModal('admin-options-modal');
-    showMessage('info', 'Carregando relatórios e estatísticas...');
-    
-    // Mostrar estatísticas detalhadas
-    loadEstatatisticasAdmin();
-}
 
 function addAdminControls() {
     // Adicionar controles administrativos à interface
@@ -2095,11 +2532,6 @@ function addAdminControls() {
     }
 }
 
-function loadEstatatisticasAdmin() {
-    // Carregar estatísticas administrativas detalhadas
-    console.log('📊 Carregando estatísticas administrativas...');
-    // Esta função pode ser expandida para mostrar relatórios detalhados
-}
 
 function exportarDados() {
     showMessage('info', 'Preparando exportação de dados...');
@@ -2117,7 +2549,7 @@ window.logout = logout;
 // Funções globais para o painel admin
 window.openAdminDashboard = openAdminDashboard;
 window.showOcorrenciasAdmin = showOcorrenciasAdmin;
-window.showRelatorios = showRelatorios;
+// showRelatorios removed because reporting is not implemented
 window.exportarDados = exportarDados;
 window.showBackup = showBackup;
 
@@ -2832,3 +3264,26 @@ if (document.readyState === 'loading') {
 } else {
     initEnhancements();
 }
+
+
+// Função para levar ao mapa somente quando o usuário clicar no botão
+window.verNoMapaDetalhado = function(lat, lng) {
+    const mapElement = document.getElementById('mapa');
+    
+    // 1. Rola suavemente até a seção do mapa
+    mapElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // 2. Garante que o mapa renderize corretamente após o scroll
+    if (window.cidadeAberta && window.cidadeAberta.state && window.cidadeAberta.state.map) {
+        setTimeout(() => {
+            window.cidadeAberta.state.map.invalidateSize(); // Corrige falhas de renderização cinza
+            window.cidadeAberta.state.map.setView([lat, lng], 17);
+            
+            // Abre o popup para destacar o local
+            L.popup()
+                .setLatLng([lat, lng])
+                .setContent('<b>📍 Local da Ocorrência</b><br>O problema foi reportado aqui.')
+                .openOn(window.cidadeAberta.state.map);
+        }, 800);
+    }
+};
